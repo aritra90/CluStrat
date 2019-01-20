@@ -1,14 +1,14 @@
 #!/bin/bash
 
 #PBS -q pdrineas
-#PBS -l nodes=1:ppn=1,naccesspolicy=shared
-#PBS -l walltime=33:00:00
+#PBS -l nodes=1:ppn=1,naccesspolicy=singleuser
+#PBS -l walltime=30:00:00
 
 # set name of job
-#PBS -N MLGWASJob
+#PBS -N mysonMLGWASJob
 
 # mail alert at (b)eginning, (e)nd and (a)bortion of execution
-#PBS -m bea
+# #PBS -m bea
 
 # send mail to the following address
 #PBS -M mcburch@purdue.edu
@@ -17,7 +17,7 @@
 #PBS -V
 
 # start job from the directory it was submitted
-cd /home/bose6/PopGen/DIM/PRK
+cd /scratch/brown/mcburch/GWASPipeline/MLGWAS
 
 source /depot/pdrineas/data/gwas_scripts/software_paths.conf
 
@@ -90,7 +90,10 @@ tefilename=""
 start_time=`date +%s`
 dt=$(date +"%Y-%m-%d_%T");
 outdir=""
-pvals=( 100 500 1000 1500 2000 )
+pvals=( 50 100 200 300 500 1000 2000 )
+# pvals=( 100 500 1000 )
+# ratios=( "1:1" "1:1.25" "1:1.5" "1:2" "1:2.25" "1:2.5" "1:2.75" "1:3" )
+ratios=( "1:1")
 assocfile=""
 prefix=""
 ######---------------------------------------------------------
@@ -114,6 +117,13 @@ then
     # for different selections of markers...
     for value in "${pvals[@]}"
     do
+        if [ -d "${prefix}_${type}_${value}" ]; then
+            rm -r "${prefix}_${type}_${value}/"
+            mkdir "${prefix}_${type}_${value}/"
+        else
+            mkdir "${prefix}_${type}_${value}/"
+        fi
+
         filename="${prefix}_SNPs_top_${value}.txt"
         # extract top 'k' p values
         # the 'top.assoc' file is found from the 'final_associations' step in the GWAS pipeline
@@ -123,36 +133,48 @@ then
         ${PLINK2PATH} --bfile ${dataset##*/} \
                                         --extract $filename \
                                         --make-bed \
-                                        --out ${dataset##*/}_extracted_$value
+                                        --out "${dataset##*/}_extracted_${value}"
         echo -e '╚════════════════════════════════════════════════════════════════════════════╝\n'
 
-        # outdir="${dataset}_${type}_${value}_${dt}"
-        # mkdir -p $outdir
-        echo '(0) Splitting data into train and test sets...'
-        filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+
+        echo 'Splitting data into train and test sets...'
+        # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+
         # split between train and test
-        bash bose_splitdata.sh --subsample 250 "${dataset}_extracted_${value}"
-        trfilename="${dataset}_extracted_${value}_trainset"
-        tefilename="${dataset}_extracted_${value}_testset"
+        bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+
+        mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+
+        dirPrefix=`readlink -e ${prefix}_${type}_${value}`
+
+        trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
+        tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
         # run the analytics
-        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value | tee $filename
+        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
         # mv $filename $outdir
+
+
     done
 else
     # for different selections of markers...
     for value in "${pvals[@]}"
     do
-        # outdir="${dataset}_${type}_${value}_${dt}"
-        # mkdir -p $outdir
-        echo '(1) Splitting data into train and test sets...'
-        filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+        echo 'Splitting data into train and test sets...'
+        # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+
         # split between train and test
-        bash bose_splitdata.sh --subsample 250 "${dataset}_extracted_${value}"
-        trfilename="${dataset}_extracted_${value}_trainset"
-        tefilename="${dataset}_extracted_${value}_testset"
+        bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+
+        mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+
+        dirPrefix=`readlink -e ${prefix}_${type}_${value}`
+
+        trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
+        tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
         # run the analytics
-        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix  -cl $type -cv $cv -pval $value | tee $filename
+        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
         # mv $filename $outdir
+
     done
 fi
 

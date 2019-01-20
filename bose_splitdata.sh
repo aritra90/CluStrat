@@ -8,18 +8,40 @@ int_re='^[0-9]+$'
 PARAMS=""
 # Default values
 subsample=""
+num_cases="300"
+num_controls="300"
 
 while (( "$#" )); do
   case "$1" in
-    --subsample)
-      # echo "$(($2))"
-      if ! [[ "$(($subsample))" =~ $int_re ]] ; then
-          echo "Subsampling value needs to be a positive integer.";
+    --cases)
+      num_cases=$2
+      if ! [[ "$(($num_cases))" =~ $int_re ]] ; then
+          echo "Number of cases needs to be a positive integer.";
           exit 1
       fi
-      subsample=$2
       shift 2
       ;;
+    --controls)
+      num_controls=$2
+      if ! [[ "$(($num_controls))" =~ $int_re ]] ; then
+          echo "Number of controls needs to be a positive integer.";
+          exit 1
+      fi
+      shift 2
+      ;;
+    # --subsample)
+      # echo "$(($2))"
+      # if ! [[ "$(($subsample))" =~ $int_re ]] ; then
+      #     echo "Subsampling value needs to be a positive integer.";
+      #     exit 1
+      # fi
+
+      # subsample=$2
+      # arrIN=(${subsample//:/ })
+      # num_controls=$(echo "300*${arrIN[1]}" | bc -l)
+      # num_controls=$(echo "($num_controls+0.5)/1" | bc)
+      # shift 2
+      # ;;
     --) # end argument parsing
       shift
       break
@@ -65,13 +87,13 @@ grep -Fvxf ${dataset##*/}_cases_test.txt ${dataset##*/}_cases.txt > ${dataset##*
 grep -Fvxf ${dataset##*/}_controls_test.txt ${dataset##*/}_controls.txt > ${dataset##*/}_controls_train.txt
 
 # subsampling the training set
-if [ -z "$subsample" ]
+if [ -z "$num_cases" ]
 then
       cat ${dataset##*/}_cases_train.txt > ${dataset##*/}_trainsamples.txt
       cat ${dataset##*/}_controls_train.txt >> ${dataset##*/}_trainsamples.txt
 else
-      shuf -n "$(($subsample))" ${dataset##*/}_cases_train.txt > ${dataset##*/}_subcases_train.txt
-      shuf -n "$(($subsample))" ${dataset##*/}_controls_train.txt > ${dataset##*/}_subcontrols_train.txt
+      shuf -n "$(($num_cases))" ${dataset##*/}_cases_train.txt > ${dataset##*/}_subcases_train.txt
+      shuf -n "$(($num_controls))" ${dataset##*/}_controls_train.txt > ${dataset##*/}_subcontrols_train.txt
 
       cat ${dataset##*/}_subcases_train.txt > ${dataset##*/}_trainsamples.txt
       cat ${dataset##*/}_subcontrols_train.txt >> ${dataset##*/}_trainsamples.txt
@@ -92,13 +114,3 @@ ${PLINK2PATH} --bfile ${dataset##*/} \
                                 --make-bed \
                                 --out ${dataset##*/}_testset
 echo -e '╚════════════════════════════════════════════════════════════════════════════╝\n'
-
-# COMMENT/FLAG OUT THE BELOW WHEN DOIN SUBSAMPLING
-
-# echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
-# ${PLINK2PATH} --bfile ${dataset##*/} \
-#                                 --allow-no-sex \
-#                                 --remove  ${dataset##*/}_testsamples.txt \
-#                                 --make-bed \
-#                                 --out ${dataset##*/}_trainset
-# echo -e '╚════════════════════════════════════════════════════════════════════════════╝\n'

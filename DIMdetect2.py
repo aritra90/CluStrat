@@ -4,11 +4,10 @@ from plinkio import plinkfile
 import parseplink as pp
 import numpy as np
 import argparse
-import cnfmtplt as cmp 
 
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.linear_model import Ridge,RidgeCV, Lasso, ElasticNet, LinearRegression
-from sklearn.svm import SVC
+from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression, RidgeCV
+from sklearn.svm import SVC, SVR
 from sklearn.feature_selection import RFE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import PolynomialFeatures
@@ -160,9 +159,6 @@ if __name__ == '__main__':
     for trainhandle, testhandle in zip(train_handles, test_handles):
         G_train, G_test, train_pheno, test_pheno = read_handlers(trainhandle, testhandle)
 
-        # Keep track of accuracy for plotting (keeping the best across all parameters)
-        best_accuracy = 0
-
         # Set parameters first so we can loop through various lists as well
         #--------------------------------------------------------------------#
         if classifiertype == 'LDA':
@@ -217,7 +213,7 @@ if __name__ == '__main__':
         elif classifiertype == 'Ridge':
             # Parameters
             # Regularization strength
-            alpha = [1.0]
+            alpha = [0.001,0.01,0.1,1.0,10.0]
             # Intercept of the model
             fit_intercept = [True]
             # Normalize (subtract the mean and divide by L2 norm)
@@ -310,14 +306,40 @@ if __name__ == '__main__':
             iterations = list(itertools.product(C,kernel,degree,gamma,coef0,shrinking,probability,tol_SVM,verbose,max_iter,decision_function_shape,random_state))
 
         #--------------------------------------------------------------------#
+        elif classifiertype == 'SVR':
+                # Parameters
+                # Penalty parameter of error term
+                C = [1.0]
+                # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+                kernel = ['rbf']
+                # Degree of the polynomial kernel
+                degree = [3]
+                # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+                gamma = ['auto']
+                # Independent term in kernel function for 'poly' and 'sigmoid'
+                coef0 = [0.0]
+                # Shrinking heuristic
+                shrinking = [True]
+                # Stopping criterion
+                tol_SVR = [1e-3]
+                # Verbose output
+                verbose = [False]
+                # Limit on iterations within solver
+                max_iter = [-1]
+                # Epsilon for the margin
+                epsilon = [0.1]
+
+                iterations = list(itertools.product(C,kernel,degree,gamma,coef0,shrinking,tol_SVR,verbose,max_iter,epsilon))
+
+        #--------------------------------------------------------------------#
         elif classifiertype == 'kSVM':
             # Parameters
             # Penalty parameter of error term
             C = [1.0]
             # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
-            kernel = ['rbf']
+            kernel = ['poly']
             # Degree of the polynomial kernel
-            degree = [8]	
+            degree = [3]
             # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
             gamma = ['auto']
             # Independent term in kernel function for 'poly' and 'sigmoid'
@@ -375,6 +397,26 @@ if __name__ == '__main__':
             iterations = list(itertools.product(C,n_features_to_select,step,verbose))
 
         #--------------------------------------------------------------------#
+        elif classifiertype == 'RidgeCV':
+            # Parameters
+            # Array of alpha values to try with built-in cross-validation
+            alphas = [[0.0001,0.001,0.1,1.0,10.0,100.0]]
+            # Calculate intercept or not (not when data is centered)
+            fit_intercept = [True]
+            # Ignored when fit_intercept is False
+            normalize = [False]
+            # Scorer callable object
+            scoring = [None]
+            # Cross-Validation scheme (None = LOOCV,integer for number of folds, others...)
+            cv = [None]
+            # Generalized CV (see documentation)
+            gcv_mode = [None]
+            # Cross validation values corresponding to each alpha
+            store_cv_values = [True]
+
+            iterations = list(itertools.product(alphas,fit_intercept,normalize,scoring,cv,gcv_mode,store_cv_values))
+
+        #--------------------------------------------------------------------#
         elif classifiertype == 'RandomForest':
             # Parameters
             # Number of trees in the forest
@@ -423,7 +465,8 @@ if __name__ == '__main__':
         # The format of the list 'elem' will depend on the algorithm...
         # Iterate through different options of parameters
         for elem in iterations:
-
+            # Keep track of accuracy for plotting (keeping the best across all parameters)
+            best_training_accuracy = 0
             params_dict = {}
             best_params = {}
             #--------------------------------------------------------------------#
@@ -443,23 +486,29 @@ if __name__ == '__main__':
                 # Threshold for rank estimation (only in 'svd' solver)
                 tol_LDA = elem[5]
 
+                params_dict = {'solver':solver_LDA,'shrinkage':shrinkage,'tolerance':tol_LDA}
+
                 model_init = LinearDiscriminantAnalysis(solver=solver_LDA,shrinkage=shrinkage,tol=tol_LDA)
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = LinearDiscriminantAnalysis(solver=solver_LDA,shrinkage=shrinkage,tol=tol_LDA)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
+                #     # Store corresponding training accuracy and confusion matrix
+                #     best_training_accuracy = round(scores[1],3)
+                #     best_cnfmat = cnfmat
+                #     # Also store the corresponding case(postive) and control(negative) accuracies
+                #     # TN/(TN+FP)
+                #     control_accuracy = (float(cnfmat[0][0]))/(cnfmat[0][0]+cnfmat[0][1])
+                #     # TP/(TP+FN)
+                #     case_accuracy = (float(cnfmat[1][1]))/(cnfmat[1][0]+cnfmat[1][1])
+                #     # Store corresponding f1 score
+                #     f1score = round(stats_var[1],3)
+                # # print(best_accuracy)
 
-                params_dict = {'solver':solver_LDA,'shrinkage':shrinkage,'tolerance':tol_LDA}
-
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='lda', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
             #--------------------------------------------------------------------#
             elif classifiertype == 'QDA':
                 print('Model Type: QDA')
@@ -481,16 +530,12 @@ if __name__ == '__main__':
 
                 params_dict = {'regularization':reg_param,'tolerance':tol_QDA}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='qda', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
+
             #--------------------------------------------------------------------#
             elif classifiertype == 'PolyReg':
                 print('Model Type: Polynomial Regression')
@@ -510,27 +555,13 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = LinearRegression(fit_intercept=fit_intercept)
-                poly = PolynomialFeatures(degree=degree,interaction_only=interaction_only,include_bias=include_bias)
-
                 params_dict = {'fit_intercept':fit_intercept,'degree':degree,'interaction_only':interaction_only,'include_bias':include_bias}
 
-                G_train_ply = poly.fit_transform(G_train)
-                G_test_ply = poly.fit_transform(G_test)
-                model.fit(G_train_ply, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test_ply)
-                # discretization of the continuous predictions
-                ytestpred = np.asarray([0 if counter < 1 else 1 for counter in ytestpred])
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                # print(ytestpred.round())
-                rp_model = rp.Model(model_name='polyreg', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'Ridge':
                 print('Model Type: Ridge Regression')
@@ -555,24 +586,14 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = Ridge(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Ridge,solver=solver_Ridge)
-
                 params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Ridge,'solver':solver_Ridge}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-
-                rp_model = rp.Model(model_name='ridge', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
-            
             elif classifiertype == 'Lasso':
                 print('Model Type: Lasso Regression')
                 # Parameters
@@ -597,20 +618,13 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = Lasso(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Lasso,positive=positive,selection=selection)
-
                 params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Lasso,'positive':positive,'selection':selection}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='lasso', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'Elastic':
                 print('Model Type: Elastic Net')
@@ -639,20 +653,13 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = ElasticNet(alpha=alpha,l1_ratio=l1_ratio,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Elastic,positive=positive,selection=selection)
-
                 params_dict = {'alpha':alpha,'l1_ratio':l1_ratio,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Elastic,'positive':positive,'selection':selection}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='elastic', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'SVM':
                 print('Model Type: SVM')
@@ -689,26 +696,57 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = SVC(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
-                                shrinking=shrinking,probability=probability,tol=tol,verbose=verbose,
-                                max_iter=max_iter,decision_function_shape=decision_function_shape,
-                                random_state=random_state)
-
                 params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
                                 'coef0':coef0,'shrinking':shrinking,'probability':probability,
                                 'tol':tol,'verbose':verbose,'max_iter':max_iter,'decision_function_shape':decision_function_shape,
                                 'random_state':random_state}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='svm', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
+
+            #--------------------------------------------------------------------#
+            elif classifiertype == 'SVR':
+                    print('Model Type: SVR')
+                    # Parameters
+                    # Penalty parameter of error term
+                    C = elem[0]
+                    # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+                    kernel = elem[1]
+                    # Degree of the polynomial kernel
+                    degree = elem[2]
+                    # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+                    gamma = elem[3]
+                    # Independent term in kernel function for 'poly' and 'sigmoid'
+                    coef0 = elem[4]
+                    # Shrinking heuristic
+                    shrinking = elem[5]
+                    # Stopping criterion
+                    tol_SVR = elem[6]
+                    # Verbose output
+                    verbose = elem[7]
+                    # Limit on iterations within solver
+                    max_iter = elem[8]
+                    # Epsilon for the margin
+                    epsilon = elem[9]
+
+                    model_init = SVR(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
+                                    shrinking=shrinking,tol=tol_SVR,verbose=verbose,
+                                    max_iter=max_iter,epsilon=epsilon)
+
+                    scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
+
+                    params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
+                                    'coef0':coef0,'shrinking':shrinking,'tol':tol_SVR,'verbose':verbose,
+                                    'max_iter':max_iter,'epsilon':epsilon}
+
+                    if scores[0] > best_training_accuracy:
+                        best_training_accuracy = scores[0]
+                        # Store corresponding parameters
+                        best_params = params_dict
+                        best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'kSVM':
                 print('Model Type: kernel-SVM')
@@ -745,26 +783,16 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = SVC(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
-                                shrinking=shrinking,probability=probability,tol=tol,verbose=verbose,
-                                max_iter=max_iter,decision_function_shape=decision_function_shape,
-                                random_state=random_state)
-
                 params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
                                 'coef0':coef0,'shrinking':shrinking,'probability':probability,
                                 'tol':tol,'verbose':verbose,'max_iter':max_iter,'decision_function_shape':decision_function_shape,
                                 'random_state':random_state}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='ksvm', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'RidgeSVM':
                 print('Model Type: Ridge-SVM')
@@ -789,20 +817,13 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = Ridge(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_RidgeSVM,solver=solver_RidgeSVM)
-
                 params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_RidgeSVM,'solver':solver_RidgeSVM}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='ridgesvm', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'RFESVM':
                 print('Model Type: RFE-SVM')
@@ -821,21 +842,54 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                estimator_object = SVC(kernel='linear',C=C)
-                model_init = RFE(estimator=estimator_object, n_features_to_select=n_features_to_select,step=step,verbose=verbose)
-
                 params_dict = {'C':C,'estimator_object':estimator_object,'n_features_to_select':n_features_to_select,'step':step,'verbose':verbose}
 
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
+
+            #--------------------------------------------------------------------#
+            elif classifiertype == 'RidgeCV':
+                print('Model Type: RidgeCV')
+                # Parameters
+                # Array of alpha values to try with built-in cross-validation
+                alphas = elem[0]
+                # Calculate intercept or not (not when data is centered)
+                fit_intercept = elem[1]
+                # Ignored when fit_intercept is False
+                normalize = elem[2]
+                # Scorer callable object
+                scoring = elem[3]
+                # Cross-Validation scheme (None = LOOCV,integer for number of folds, others...)
+                cv = elem[4]
+                # Generalized CV (see documentation)
+                gcv_mode = elem[5]
+                # Cross validation values corresponding to each alpha
+                store_cv_values = elem[6]
+
+                # model_init = RidgeCV(alphas=alphas,fit_intercept=fit_intercept,normalize=normalize,scoring=scoring,cv=cv,gcv_mode=gcv_mode,store_cv_values=store_cv_values)
+
+                # Wont need this step but still need to fill 'scores' with appropriate values
+                # scores, model = cross_validation_custom(G_train, train_pheno, model_init, crossval)
+
+                # Test based on BEST alphas
+
+                model = RidgeCV(alphas=alphas,fit_intercept=fit_intercept,normalize=normalize,scoring=scoring,cv=cv,gcv_mode=gcv_mode,store_cv_values=store_cv_values)
+
+                params_dict = {'alphas':alphas,'fit_intercept':fit_intercept,'normalize':normalize,'scoring':scoring,'cv':cv,'gcv_mode':gcv_mode,'store_cv_values':store_cv_values}
+
                 model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='rfesvm', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+
+                # Just so it doesnt break given the report filling setup (might be able to remove)
+                scores = [model.score(G_train, train_pheno)]*4
+
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             elif classifiertype == 'RandomForest':
                 print('Model Type: Random Forest')
@@ -882,95 +936,587 @@ if __name__ == '__main__':
 
                 scores, model = cross_validation_custom(G_train, train_pheno,model_init, crossval)
 
-                model = RandomForestClassifier(n_estimators=n_estimators,criterion=criterion,max_depth=max_depth,
-                                                    min_samples_split=min_samples_split,min_samples_leaf=min_samples_leaf,
-                                                    min_weight_fraction_leaf=min_weight_fraction_leaf,max_features=max_features,
-                                                    max_leaf_nodes=max_leaf_nodes,min_impurity_decrease=min_impurity_decrease,
-                                                    min_impurity_split=min_impurity_split,bootstrap=bootstrap,oob_score=oob_score,
-                                                    n_jobs=n_jobs,random_state=0,verbose=verbose,class_weight=class_weight)
-
                 params_dict = {'n_estimators':n_estimators,'criterion':criterion,'max_depth':max_depth,'min_samples_split':min_samples_split,'min_samples_leaf':min_samples_leaf,'min_weight_fraction_leaf':min_weight_fraction_leaf,
                                 'max_features':max_features,'max_leaf_nodes':max_leaf_nodes,'min_impurity_decrease':min_impurity_decrease,'min_impurity_split':min_impurity_split,'bootstrap':bootstrap,'oob_score':oob_score,
                                 'n_jobs':n_jobs,'random_state':random_state,'verbose':verbose,'class_weight':class_weight}
 
-                model.fit(G_train, train_pheno)
-                # test the model on your holdout test data
-                ytestpred = model.predict(G_test)
-                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
-                rp_model = rp.Model(model_name='randomforest', model_info=[' '], training_metrics=scores,
-                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
-                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
-                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
-                # sys.exit(0)
+                if scores[0] > best_training_accuracy:
+                    best_training_accuracy = scores[0]
+                    # Store corresponding parameters
+                    best_params = params_dict
+                    best_param_arr = elem
             #--------------------------------------------------------------------#
             else:
                 print('Not a classifier covered in this script. See MLGWAS.rmd for the options...')
                 sys.exit(0)
             #--------------------------------------------------------------------#
 
-            metrics = ['accuracy', 'f1_micro', 'f1_macro', 'f1_weighted']
-            # headers for output files
-            dataset_name = str(prefix)
-            file_prefix = dataset_name+'_'+classifiertype
-            # time_string = datetime.datetime.now()
-            rn = random.randint(1,200000)
+        #--------------------------------------------------------------------#
+        if classifiertype == 'LDA':
 
-            outdir = file_prefix+'_'+str(value)
-            os.mkdir(outdir)
+            # Parameters
+            # Solver to use (options: 'svd', 'lsqr', and 'eigen')
+            solver_LDA = best_param_arr[0]
+            # Shrinkage parameter (options: None, 'auto' and 0 < float < 1)
+            shrinkage = best_param_arr[1]
+            # Class priors
+            priors = best_param_arr[2]
+            # Number of components for dimensionality reduction
+            n_components = best_param_arr[3]
+            # Class covariance matrix (only in 'svd' solver)
+            store_covariance = best_param_arr[4]
+            # Threshold for rank estimation (only in 'svd' solver)
+            tol_LDA = best_param_arr[5]
 
-            doc = rp.generate_pdf_with_name(file_prefix,rn)
-            num_indivs = len(G_test) + len(G_train)
-            n_snps = G_test.shape[1]
-			#convert the labels 
-            # build the confusion matrix
-            cnfmat = confusion_matrix(test_pheno, ytestpred)
+            model = LinearDiscriminantAnalysis(solver=solver_LDA,shrinkage=shrinkage,tol=tol_LDA)
 
-            rp.fill_document(doc, [rp_model], metrics, cnfmat, dataset_name, num_indivs, n_snps, G_train.shape, G_test.shape,5)
+            params_dict = {'solver':solver_LDA,'shrinkage':shrinkage,'tolerance':tol_LDA}
 
-            print('\n****RESULT STATISTICS****')
-            print('\n===============================================\n')
-            print("\n Precision, Recall and F-score: Macro\n")
-            stats_var = prfs(test_pheno, ytestpred, average='macro')
-            print(stats_var)
-            print("\n Precision, Recall and F-score: Micro\n")
-            print(prfs(test_pheno, ytestpred, average='micro'))
-            print("\n Precision, Recall and F-score: Weighted\n")
-            print(prfs(test_pheno, ytestpred, average='weighted'))
-            print('\n===============================================\n')
-            print('\nConfusion Matrix:')
-            print('\n===============================================\n')
-            print(cnfmat)
-            print('\n===============================================\n')
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='lda', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'QDA':
 
-            print(classification_report(test_pheno, ytestpred))
+            # Parameters
+            # Class priors
+            priors = best_param_arr[0]
+            # Regularization
+            reg_param = best_param_arr[1]
+            # Class covariance matrix
+            store_covariance = best_param_arr[2]
+            # Threshold for rank estimation
+            tol_QDA = best_param_arr[3]
 
-            temporary_accuracy = (float(cnfmat[0][0]+cnfmat[1][1]))/(cnfmat[0][0]+cnfmat[0][1]+cnfmat[1][0]+cnfmat[1][1])
-            # print(temporary_accuracy)
-            if temporary_accuracy > best_accuracy:
-                best_accuracy = temporary_accuracy
-                best_params = params_dict
-                # Also store the corresponding case(postive) and control(negative) accuracies
-                specificity = (float(cnfmat[0][0]))/(cnfmat[0][0]+cnfmat[0][1])
-                sensitivity = (float(cnfmat[1][1]))/(cnfmat[1][0]+cnfmat[1][1])
-			
-                # Store corresponding f1 score
-                f1_score = stats_var[1]
-            # print(best_accuracy)
+            model = QuadraticDiscriminantAnalysis(reg_param=reg_param,tol=tol_QDA)
 
-            # Move the files to their own directory
-            absolute_prefix = file_prefix+'_'+str(rn)
+            params_dict = {'regularization':reg_param,'tolerance':tol_QDA}
 
-            f = open(absolute_prefix+'_parameters.txt','w')
-            f.write('Parameter List: \n')
-            for key in params_dict:
-                f.write('{'+str(key)+','+str(params_dict[key])+'}\n')
-            f.close()
-            shutil.move(absolute_prefix+'_parameters.txt', outdir+'/'+absolute_prefix+'_parameters.txt')
-            shutil.move(absolute_prefix+'.tex', outdir+'/'+absolute_prefix+'.tex')
-            shutil.move(absolute_prefix+'.pdf', outdir+'/'+absolute_prefix+'.pdf')
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='qda', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'PolyReg':
 
+            # Parameters
+            # Intercept of the model
+            fit_intercept = best_param_arr[0]
+            # Normalize (subtract the mean and divide by L2 norm)
+            normalize = best_param_arr[1]
+            # Degree of polynomial features
+            degree = best_param_arr[2]
+            # Interaction of features
+            interaction_only = best_param_arr[3]
+            # Include bias column (feature with all zeros)
+            include_bias = best_param_arr[4]
 
+            model = LinearRegression(fit_intercept=fit_intercept)
+            poly = PolynomialFeatures(degree=degree,interaction_only=interaction_only,include_bias=include_bias)
+
+            params_dict = {'fit_intercept':fit_intercept,'degree':degree,'interaction_only':interaction_only,'include_bias':include_bias}
+
+            G_train_ply = poly.fit_transform(G_train)
+            G_test_ply = poly.fit_transform(G_test)
+            model.fit(G_train_ply, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test_ply)
+            # discretization of the continuous predictions
+            ytestpred = np.asarray([0 if counter < 1 else 1 for counter in ytestpred])
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            # print(ytestpred.round())
+            rp_model = rp.Model(model_name='polyreg', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'Ridge':
+
+            # Parameters
+            # Regularization strength
+            alpha = best_param_arr[0]
+            # Intercept of the model
+            fit_intercept = best_param_arr[1]
+            # Normalize (subtract the mean and divide by L2 norm)
+            normalize = best_param_arr[2]
+            # Max iterations for the solver
+            max_iter = best_param_arr[3]
+            # Precision of solution
+            tol_Ridge = best_param_arr[4]
+            # Solver to use (options: 'auto', 'svd', 'cholesky', 'lsqr','sparse_cg', 'sag', and 'saga')
+            solver_Ridge = best_param_arr[5]
+            # Random seed
+            random_state = best_param_arr[6]
+
+            model = Ridge(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Ridge,solver=solver_Ridge)
+
+            params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Ridge,'solver':solver_Ridge}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+
+            rp_model = rp.Model(model_name='ridge', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'Lasso':
+
+            # Parameters
+            # Regularization strength
+            alpha = best_param_arr[0]
+            # Intercept of the model
+            fit_intercept = best_param_arr[1]
+            # Normalize (subtract the mean and divide by L2 norm)
+            normalize = best_param_arr[2]
+            # Max iterations for the solver
+            max_iter = best_param_arr[3]
+            # Precision of solution
+            tol_Lasso = best_param_arr[4]
+            # Set coefficients to be positive
+            positive = best_param_arr[5]
+            # Random seed
+            random_state = best_param_arr[6]
+            # Convergence method (options: 'cyclic' or 'random')
+            selection = best_param_arr[7]
+
+            model = Lasso(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Lasso,positive=positive,selection=selection)
+
+            params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Lasso,'positive':positive,'selection':selection}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='lasso', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'Elastic':
+
+            # Parameters
+            # Regularization strength
+            alpha = best_param_arr[0]
+            # Mixing parameter
+            l1_ratio = best_param_arr[1]
+            # Intercept of the model
+            fit_intercept = best_param_arr[2]
+            # Normalize (subtract the mean and divide by L2 norm)
+            normalize = best_param_arr[3]
+            # Max iterations for the solver
+            max_iter = best_param_arr[4]
+            # Precision of solution
+            tol_Elastic = best_param_arr[5]
+            # Set coefficients to be positive
+            positive = best_param_arr[6]
+            # Random seed
+            random_state = best_param_arr[7]
+            # Convergence method (options: 'cyclic' or 'random')
+            selection = best_param_arr[8]
+
+            model = ElasticNet(alpha=alpha,l1_ratio=l1_ratio,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_Elastic,positive=positive,selection=selection)
+
+            params_dict = {'alpha':alpha,'l1_ratio':l1_ratio,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_Elastic,'positive':positive,'selection':selection}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='elastic', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'SVM':
+
+            # Parameters
+            # Penalty parameter of error term
+            C = best_param_arr[0]
+            # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+            kernel = best_param_arr[1]
+            # Degree of the polynomial kernel
+            degree = best_param_arr[2]
+            # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+            gamma = best_param_arr[3]
+            # Independent term in kernel function for 'poly' and 'sigmoid'
+            coef0 = best_param_arr[4]
+            # Shrinking heuristic
+            shrinking = best_param_arr[5]
+            # Enable probability estimates
+            probability = best_param_arr[6]
+            # Stopping criterion
+            tol = best_param_arr[7]
+            # Verbose output
+            verbose = best_param_arr[8]
+            # Limit on iterations within solver
+            max_iter = best_param_arr[9]
+            # One versus rest decision boundary or one versus one (options: 'ovr' and 'ovo')
+            decision_function_shape = best_param_arr[10]
+            # Pseudo random number generator seed
+            random_state = best_param_arr[11]
+
+            model = SVC(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
+                            shrinking=shrinking,probability=probability,tol=tol,verbose=verbose,
+                            max_iter=max_iter,decision_function_shape=decision_function_shape,
+                            random_state=random_state)
+
+            params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
+                            'coef0':coef0,'shrinking':shrinking,'probability':probability,
+                            'tol':tol,'verbose':verbose,'max_iter':max_iter,'decision_function_shape':decision_function_shape,
+                            'random_state':random_state}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='svm', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'SVR':
+
+                # Parameters
+                # Penalty parameter of error term
+                C = best_param_arr[0]
+                # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+                kernel = best_param_arr[1]
+                # Degree of the polynomial kernel
+                degree = best_param_arr[2]
+                # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+                gamma = best_param_arr[3]
+                # Independent term in kernel function for 'poly' and 'sigmoid'
+                coef0 = best_param_arr[4]
+                # Shrinking heuristic
+                shrinking = best_param_arr[5]
+                # Stopping criterion
+                tol_SVR = best_param_arr[6]
+                # Verbose output
+                verbose = best_param_arr[7]
+                # Limit on iterations within solver
+                max_iter = best_param_arr[8]
+                # Epsilon for the margin
+                epsilon = best_param_arr[9]
+
+                model = SVR(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
+                                shrinking=shrinking,tol=tol_SVR,verbose=verbose,
+                                max_iter=max_iter,epsilon=epsilon)
+
+                params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
+                                'coef0':coef0,'shrinking':shrinking,'tol':tol_SVR,'verbose':verbose,
+                                'max_iter':max_iter,'epsilon':epsilon}
+
+                model.fit(G_train, train_pheno)
+                # test the model on your holdout test data
+                ytestpred = model.predict(G_test)
+                ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+                rp_model = rp.Model(model_name='svr', model_info=[' '], training_metrics=scores,
+                               testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                                prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                                prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                                prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+                # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'kSVM':
+
+            # Parameters
+            # Penalty parameter of error term
+            C = best_param_arr[0]
+            # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+            kernel = best_param_arr[1]
+            # Degree of the polynomial kernel
+            degree = best_param_arr[2]
+            # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+            gamma = best_param_arr[3]
+            # Independent term in kernel function for 'poly' and 'sigmoid'
+            coef0 = best_param_arr[4]
+            # Shrinking heuristic
+            shrinking = best_param_arr[5]
+            # Enable probability estimates
+            probability = best_param_arr[6]
+            # Stopping criterion
+            tol = best_param_arr[7]
+            # Verbose output
+            verbose = best_param_arr[8]
+            # Limit on iterations within solver
+            max_iter = best_param_arr[9]
+            # One versus rest decision boundary or one versus one (options: 'ovr' and 'ovo')
+            decision_function_shape = best_param_arr[10]
+            # Pseudo random number generator seed
+            random_state = best_param_arr[11]
+
+            model = SVC(C=C,kernel=kernel,degree=degree,gamma=gamma,coef0=coef0,
+                            shrinking=shrinking,probability=probability,tol=tol,verbose=verbose,
+                            max_iter=max_iter,decision_function_shape=decision_function_shape,
+                            random_state=random_state)
+
+            params_dict = {'C':C,'kernel':kernel,'degree':degree,'gamma':gamma,
+                            'coef0':coef0,'shrinking':shrinking,'probability':probability,
+                            'tol':tol,'verbose':verbose,'max_iter':max_iter,'decision_function_shape':decision_function_shape,
+                            'random_state':random_state}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='ksvm', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'RidgeSVM':
+
+            # Parameters
+            # Regularization strength
+            alpha = best_param_arr[0]
+            # Intercept of the model
+            fit_intercept = best_param_arr[1]
+            # Normalize (subtract the mean and divide by L2 norm)
+            normalize = best_param_arr[2]
+            # Max iterations for the solver
+            max_iter = best_param_arr[3]
+            # Precision of solution
+            tol_RidgeSVM = best_param_arr[4]
+            # Solver to use (options: 'auto', 'svd', 'cholesky', 'lsqr','sparse_cg', 'sag', and 'saga')
+            solver_RidgeSVM = best_param_arr[5]
+            # Random seed
+            random_state = best_param_arr[6]
+
+            model = Ridge(alpha=alpha,fit_intercept=fit_intercept,max_iter=max_iter,tol=tol_RidgeSVM,solver=solver_RidgeSVM)
+
+            params_dict = {'alpha':alpha,'fit_intercept':fit_intercept,'max_iter':max_iter,'tolerance':tol_RidgeSVM,'solver':solver_RidgeSVM}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='ridgesvm', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'RFESVM':
+
+            # Parameters
+            # Penalty parameter of error term
+            C = best_param_arr[0]
+            # Number of features to select (None is actually half)
+            n_features_to_select = best_param_arr[1]
+            # Number of features to remove at each iteration
+            step = best_param_arr[2]
+            # Verbosity of output
+            verbose = best_param_arr[3]
+
+            estimator_object = SVC(kernel='linear',C=C)
+            model = RFE(estimator=estimator_object, n_features_to_select=n_features_to_select,step=step,verbose=verbose)
+
+            params_dict = {'C':C,'estimator_object':estimator_object,'n_features_to_select':n_features_to_select,'step':step,'verbose':verbose}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='rfesvm', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'RidgeCV':
+
+            # Parameters
+            # Array of alpha values to try with built-in cross-validation
+            alphas = best_param_arr[0]
+            # Calculate intercept or not (not when data is centered)
+            fit_intercept = best_param_arr[1]
+            # Ignored when fit_intercept is False
+            normalize = best_param_arr[2]
+            # Scorer callable object
+            scoring = best_param_arr[3]
+            # Cross-Validation scheme (None = LOOCV,integer for number of folds, others...)
+            cv = best_param_arr[4]
+            # Generalized CV (see documentation)
+            gcv_mode = best_param_arr[5]
+            # Cross validation values corresponding to each alpha
+            store_cv_values = best_param_arr[6]
+
+            # model_init = RidgeCV(alphas=alphas,fit_intercept=fit_intercept,normalize=normalize,scoring=scoring,cv=cv,gcv_mode=gcv_mode,store_cv_values=store_cv_values)
+
+            # Wont need this step but still need to fill 'scores' with appropriate values
+            # scores, model = cross_validation_custom(G_train, train_pheno, model_init, crossval)
+
+            # Test based on BEST alphas
+
+            model = RidgeCV(alphas=alphas,fit_intercept=fit_intercept,normalize=normalize,scoring=scoring,cv=cv,gcv_mode=gcv_mode,store_cv_values=store_cv_values)
+
+            params_dict = {'alphas':alphas,'fit_intercept':fit_intercept,'normalize':normalize,'scoring':scoring,'cv':cv,'gcv_mode':gcv_mode,'store_cv_values':store_cv_values}
+
+            model.fit(G_train, train_pheno)
+
+            # Just so it doesnt break given the report filling setup (might be able to remove)
+            scores = [model.score(G_train, train_pheno)]*4
+
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='ridgecv', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'RandomForest':
+
+            # Parameters
+            # Number of trees in the forest
+            n_estimators = best_param_arr[0]
+            # Function to measure quality of the split (options: 'gini' or 'entropy')
+            criterion = best_param_arr[1]
+            # Max depth of the trees
+            max_depth = best_param_arr[2]
+            # Minimum number of samples required to split a node
+            min_samples_split = best_param_arr[3]
+            # Minimum number of samples required to be at leaf node
+            min_samples_leaf = best_param_arr[4]
+            # Minimum weighted fraction of the sum total of weights to be at leaf node
+            min_weight_fraction_leaf = best_param_arr[5]
+            # Number of features when looking at each split (options: int, float, 'auto', 'sqrt', 'log2', and None)
+            max_features = best_param_arr[6]
+            # Grow trees with this many 'best' nodes
+            max_leaf_nodes = best_param_arr[7]
+            # A node will split if it induces a decrease of impurity greater than this value
+            min_impurity_decrease = best_param_arr[8]
+            # Threshold for stopping in tree growth
+            min_impurity_split = best_param_arr[9]
+            # Bootstrap samples when building tree
+            bootstrap = best_param_arr[10]
+            # Out-of-Bag samples to estimate accuracy
+            oob_score = best_param_arr[11]
+            # Number of jobs to run in parallel for fit and predict
+            n_jobs = best_param_arr[12]
+            # Random seed
+            random_state = best_param_arr[13]
+            # Verbosity of the output
+            verbose = best_param_arr[14]
+            # Weights for the classes
+            class_weight = best_param_arr[15]
+
+            model = RandomForestClassifier(n_estimators=n_estimators,criterion=criterion,max_depth=max_depth,
+                                                min_samples_split=min_samples_split,min_samples_leaf=min_samples_leaf,
+                                                min_weight_fraction_leaf=min_weight_fraction_leaf,max_features=max_features,
+                                                max_leaf_nodes=max_leaf_nodes,min_impurity_decrease=min_impurity_decrease,
+                                                min_impurity_split=min_impurity_split,bootstrap=bootstrap,oob_score=oob_score,
+                                                n_jobs=n_jobs,random_state=0,verbose=verbose,class_weight=class_weight)
+
+            params_dict = {'n_estimators':n_estimators,'criterion':criterion,'max_depth':max_depth,'min_samples_split':min_samples_split,'min_samples_leaf':min_samples_leaf,'min_weight_fraction_leaf':min_weight_fraction_leaf,
+                            'max_features':max_features,'max_leaf_nodes':max_leaf_nodes,'min_impurity_decrease':min_impurity_decrease,'min_impurity_split':min_impurity_split,'bootstrap':bootstrap,'oob_score':oob_score,
+                            'n_jobs':n_jobs,'random_state':random_state,'verbose':verbose,'class_weight':class_weight}
+
+            model.fit(G_train, train_pheno)
+            # test the model on your holdout test data
+            ytestpred = model.predict(G_test)
+            ytestpred = np.where(ytestpred.round() >= 1, 1, 0)
+            rp_model = rp.Model(model_name='randomforest', model_info=[' '], training_metrics=scores,
+                           testing_metrics=[accuracy_score(test_pheno, ytestpred),
+                                            prfs(test_pheno, ytestpred.round(), average='micro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='macro')[-2],
+                                            prfs(test_pheno, ytestpred.round(), average='weighted')[-2]])
+            # sys.exit(0)
+        #--------------------------------------------------------------------#
+        else:
+            print('Not a classifier covered in this script. See MLGWAS.rmd for the options...')
+            sys.exit(0)
+        #--------------------------------------------------------------------#
+
+        metrics = ['accuracy', 'f1_micro', 'f1_macro', 'f1_weighted']
+        # headers for output files
+        dataset_name = str(prefix)
+        file_prefix = dataset_name+'_'+classifiertype
+        # time_string = datetime.datetime.now()
+        rn = random.randint(1,200000)
+
+        outdir = file_prefix+'_'+str(value)+'_Results_'+str(rn)
+        os.mkdir(outdir)
+
+        doc = rp.generate_pdf_with_name(file_prefix,rn)
+        num_indivs = len(G_test) + len(G_train)
+        n_snps = G_test.shape[1]
+
+        # build the confusion matrix
+        stats_var = prfs(test_pheno, ytestpred, average='macro')
+        cnfmat = confusion_matrix(test_pheno, ytestpred)
+        rp.fill_document(doc, [rp_model], metrics, cnfmat, dataset_name, num_indivs, n_snps, G_train.shape, G_test.shape,5)
+
+        print('\n****RESULT STATISTICS****')
+        print('\n===============================================\n')
+        print("\n Precision, Recall and F-score: Macro\n")
+        print("\n Precision, Recall and F-score: Micro\n")
+        print(prfs(test_pheno, ytestpred, average='micro'))
+        print("\n Precision, Recall and F-score: Weighted\n")
+        print(prfs(test_pheno, ytestpred, average='weighted'))
+        print('\n===============================================\n')
+        print('\nConfusion Matrix:')
+        print('\n===============================================\n')
+        print(cnfmat)
+        print('\n===============================================\n')
+        print(classification_report(test_pheno, ytestpred))
+
+        # Move the files to their own directory
+        absolute_prefix = file_prefix+'_'+str(rn)
+
+        # f = open(absolute_prefix+'_parameters.txt','w')
+        # f.write('Parameter List: \n')
+        # for key in params_dict:
+        #     f.write('{'+str(key)+','+str(params_dict[key])+'}\n')
+        # f.close()
+        # shutil.move(absolute_prefix+'_parameters.txt', outdir+'/'+absolute_prefix+'_parameters.txt')
+        shutil.move(absolute_prefix+'.tex', outdir+'/'+absolute_prefix+'.tex')
+        shutil.move(absolute_prefix+'.pdf', outdir+'/'+absolute_prefix+'.pdf')
+
+        best_accuracy = (float(cnfmat[0][0]+cnfmat[1][1]))/(cnfmat[0][0]+cnfmat[0][1]+cnfmat[1][0]+cnfmat[1][1])
+        best_cnfmat = cnfmat
+        # Also store the corresponding case(postive) and control(negative) accuracies
+        # TN/(TN+FP)
+        control_accuracy = (float(cnfmat[0][0]))/(cnfmat[0][0]+cnfmat[0][1])
+        # TP/(TP+FN)
+        case_accuracy = (float(cnfmat[1][1]))/(cnfmat[1][0]+cnfmat[1][1])
+        # Store corresponding f1 score
+        f1score = round(stats_var[1],3)
 
         f = open(file_prefix+'_bestparameters.txt','a+')
         f.write('#--------------------------------------------------------------------#\n')
@@ -986,17 +1532,26 @@ if __name__ == '__main__':
 
         f = open(file_prefix+'_f1score.txt','a+')
         f.write('#--------------------------------------------------------------------#\n')
-        f.write('F1 Score for top '+str(value)+' SNPs extracted: '+str(f1_score)+'\n')
+        f.write('F1 Score for top '+str(value)+' SNPs extracted: '+str(f1score)+'\n')
         f.close()
 
-        f = open(file_prefix+'_specificity.txt','a+')
+        f = open(file_prefix+'_caseaccuracy.txt','a+')
         f.write('#--------------------------------------------------------------------#\n')
-        f.write('Specificity for top '+str(value)+' SNPs extracted: '+str(specificity)+'\n')
+        f.write('Positive Accuracy for top '+str(value)+' SNPs extracted: '+str(case_accuracy)+'\n')
         f.close()
 
-        f = open(file_prefix+'_sensitivity.txt','a+')
+        f = open(file_prefix+'_controlaccuracy.txt','a+')
         f.write('#--------------------------------------------------------------------#\n')
-        f.write('Sensitivity for top '+str(value)+' SNPs extracted: '+str(sensitivity)+'\n')
+        f.write('Negative Accuracy for top '+str(value)+' SNPs extracted: '+str(control_accuracy)+'\n')
         f.close()
 
+        f = open(file_prefix+'_trainingaccuracy.txt','a+')
+        f.write('#--------------------------------------------------------------------#\n')
+        f.write('Training Accuracy for top '+str(value)+' SNPs extracted: '+str(round(best_training_accuracy,3))+'\n')
+        f.close()
+
+        f = open(file_prefix+'_confusionmatrices.txt','a+')
+        f.write('#--------------------------------------------------------------------#\n')
+        f.write('Confusion matrix for top '+str(value)+' SNPs extracted: \n'+str(best_cnfmat)+'\n')
+        f.close()
     ################################ ML Stuff #################################

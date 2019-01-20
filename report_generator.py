@@ -1,7 +1,6 @@
 import copy
 import datetime
 import random
-import itertools
 import numpy as np
 from pylatex import Document, Section, Subsection, LongTable, Matrix, Math, Itemize, Figure, NoEscape
 import matplotlib
@@ -49,51 +48,25 @@ def fill_metrics_table(doc, metrics, col_string, models, index):
             to_show.insert(0, model.model_name)
             data_table.add_row(to_show)
 
-
-	
-def fill_confusion_matrix(doc, cm):
-	matrix = Matrix(cm, mtype='b')
-	math = Math(data=['M=', matrix])
-	doc.append(math)
-	accuracy = np.trace(cm) / float(np.sum(cm))
-	misclass = 1 - accuracy
-	target_names = ['Controls','Cases']
-	cmap = plt.get_cmap('Blues')
-	fig = plt.figure(figsize=(10, 7))
-	plt.imshow(cm, interpolation='nearest', cmap=cmap)
-	plt.title('Confusion Matrix',fontsize=18)
-	plt.colorbar()
-	normalize = True
-	if target_names is not None:
-		tick_marks = np.arange(len(target_names))
-		plt.xticks(tick_marks, target_names, rotation=45)
-		plt.yticks(tick_marks, target_names)
-
-	if normalize:
-		cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-
-	thresh = cm.max() / 1.5 if normalize else cm.max() / 2
-	for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-		if normalize:
-			plt.text(j, i, "{0:0.4f}".format(cm[i, j]),
-					 fontsize=18,
-					 horizontalalignment="center",
-					 color="white" if cm[i, j] > thresh else "black")
-		else:
-			plt.text(j, i, "{:,}".format(cm[i, j]),
-					fontsize=18,
-					horizontalalignment="center",
-					color="white" if cm[i, j] > thresh else "black")
-
-
-	plt.tight_layout()
-	plt.ylabel('True label',fontsize=18)
-	plt.xlabel('Predicted label\naccuracy={:0.4f}; misclass={:0.4f}'.format(accuracy, misclass),fontsize=18)
-	#plt.show()
-	with doc.create(Figure(position='htbp')) as plot:
-		plot.add_plot()
-		plot.add_caption('Confusion Matrix')
+def fill_confusion_matrix(doc, confusion_matrix):
+    matrix = Matrix(confusion_matrix, mtype='b')
+    math = Math(data=['M=', matrix])
+    doc.append(math)
+    labels = [0, 1]
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    M = np.matrix([[2, 3],
+                   [0, 0]])
+    cax = ax.matshow(M)
+    plt.title('Confusion matrix of the classifier')
+    fig.colorbar(cax)
+    ax.set_xticklabels([''] + labels)
+    ax.set_yticklabels([''] + labels)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    with doc.create(Figure(position='htbp')) as plot:
+        plot.add_plot()
+        plot.add_caption('Confusion Matrix')
 
 def fill_document(doc, models, metrics, confusion_matrix, dataset_name, num_indivs, n_snps,training_shape, test_shape, k_folds):
 
