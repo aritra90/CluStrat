@@ -60,7 +60,7 @@ fi
 
 if [[ $type == "all" ]];
 then
-    typelist=( "Ridge" "LDA" "SVR" )
+    typelist=( "Ridge" "LDA" "SVR" "QDA" "PolyReg" "Lasso" "Elastic" "kSVM" "RidgeSVM" "RFESVM" "RandomForest" )
 fi
 
 if [ -z "$cv" ]
