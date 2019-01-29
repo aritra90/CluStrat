@@ -8,8 +8,8 @@ int_re='^[0-9]+$'
 PARAMS=""
 # Default values
 subsample=""
-num_cases="300"
-num_controls="300"
+num_cases=""
+num_controls=""
 
 while (( "$#" )); do
   case "$1" in

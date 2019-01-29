@@ -30,7 +30,7 @@ rm -fr SCZ_RandomForest_*
 rm -fr SCZ_RidgeCV_*
 rm -f SZHCGSRRS_extracted_*
 
-rm -f *.out 
+rm -f *.out
 rm -f *bestparameters.txt
 rm -f *bestaccuracy.txt
 rm -f *f1score.txt
@@ -39,4 +39,5 @@ rm -f *negativeaccuracy.txt
 
 rm -f mysonMLGWASJob.*
 rm -f *.png
+rm -f *.csv
 #END

@@ -35,6 +35,8 @@ function usage() {
 # dataset_prefix=""
 # help=""
 
+typelist=( "Ridge" "LDA" "SVR" )
+
 if [[ $help == "yes" ]];
 then
     usage
@@ -50,9 +52,15 @@ fi
 
 if [ -z "$type" ]
 then
-      echo "No type specified so doing LDA by default..."
+      echo "No type specified so doing Ridge by default..."
       # usage
-      type="LDA"
+      # type="Ridge"
+      typelist=( "Ridge" )
+fi
+
+if [[ $type == "all" ]];
+then
+    typelist=( "Ridge" "LDA" "SVR" )
 fi
 
 if [ -z "$cv" ]
@@ -114,69 +122,79 @@ fi
 
 if [[ $extract == "yes" ]];
 then
-    # for different selections of markers...
-    for value in "${pvals[@]}"
+    # for different algorithm types...
+    for type in "${typelist[@]}"
     do
-        if [ -d "${prefix}_${type}_${value}" ]; then
-            rm -r "${prefix}_${type}_${value}/"
-            mkdir "${prefix}_${type}_${value}/"
-        else
-            mkdir "${prefix}_${type}_${value}/"
-        fi
+        # for different selections of markers...
+        for value in "${pvals[@]}"
+        do
+            if [ -d "${prefix}_${type}_${value}" ]; then
+                rm -r "${prefix}_${type}_${value}/"
+                mkdir "${prefix}_${type}_${value}/"
+            else
+                mkdir "${prefix}_${type}_${value}/"
+            fi
 
-        filename="${prefix}_SNPs_top_${value}.txt"
-        # extract top 'k' p values
-        # the 'top.assoc' file is found from the 'final_associations' step in the GWAS pipeline
-        awk -v var="$value" 'FNR < var+2 && FNR !=1 {print $2}' $assocfile > $filename
+            filename="${prefix}_SNPs_top_${value}.txt"
+            # extract top 'k' p values
+            # the 'top.assoc' file is found from the 'final_associations' step in the GWAS pipeline
+            awk -v var="$value" 'FNR < var+2 && FNR !=1 {print $2}' $assocfile > $filename
 
-        echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
-        ${PLINK2PATH} --bfile ${dataset##*/} \
-                                        --extract $filename \
-                                        --make-bed \
-                                        --out "${dataset##*/}_extracted_${value}"
-        echo -e '╚════════════════════════════════════════════════════════════════════════════╝\n'
-
-
-        echo 'Splitting data into train and test sets...'
-        # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
-
-        # split between train and test
-        bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
-
-        mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
-
-        dirPrefix=`readlink -e ${prefix}_${type}_${value}`
-
-        trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
-        tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
-        # run the analytics
-        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
-        # mv $filename $outdir
+            echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
+            ${PLINK2PATH} --bfile ${dataset##*/} \
+                                            --extract $filename \
+                                            --make-bed \
+                                            --out "${dataset##*/}_extracted_${value}"
+            echo -e '╚════════════════════════════════════════════════════════════════════════════╝\n'
 
 
+            echo 'Splitting data into train and test sets...'
+            # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+
+            # split between train and test
+            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+
+            mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+
+            dirPrefix=`readlink -e ${prefix}_${type}_${value}`
+
+            trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
+            tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
+            # run the analytics
+            python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
+            # mv $filename $outdir
+
+
+        done
     done
 else
-    # for different selections of markers...
-    for value in "${pvals[@]}"
+    # for different algorithm types...
+    for type in "${typelist[@]}"
     do
-        echo 'Splitting data into train and test sets...'
-        # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
+        # for different selections of markers...
+        for value in "${pvals[@]}"
+        do
+            echo 'Splitting data into train and test sets...'
+            # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
 
-        # split between train and test
-        bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+            # split between train and test
+            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
 
-        mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+            mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
 
-        dirPrefix=`readlink -e ${prefix}_${type}_${value}`
+            dirPrefix=`readlink -e ${prefix}_${type}_${value}`
 
-        trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
-        tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
-        # run the analytics
-        python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
-        # mv $filename $outdir
+            trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
+            tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
+            # run the analytics
+            python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
+            # mv $filename $outdir
 
+        done
     done
 fi
+
+python createTable.py --pvalList "${pvals[@]}" --typeList "${typelist[@]}" --data "${prefix}"
 
 # output the time taken
 echo run time is $(expr `date +%s` - $start_time) s
