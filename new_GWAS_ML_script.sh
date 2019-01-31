@@ -35,7 +35,7 @@ function usage() {
 # dataset_prefix=""
 # help=""
 
-typelist=( "Ridge" "LDA" "SVR" )
+typelist=( "${type}" )
 
 if [[ $help == "yes" ]];
 then
@@ -61,6 +61,7 @@ fi
 if [[ $type == "all" ]];
 then
     typelist=( "Ridge" "LDA" "SVR" "QDA" "PolyReg" "Lasso" "Elastic" "kSVM" "RidgeSVM" "RFESVM" "RandomForest" )
+    # typelist=( "Ridge" "LDA" "SVR" "QDA" "PolyReg" "Lasso" "Elastic" "RidgeSVM" "RandomForest" )
 fi
 
 if [ -z "$cv" ]
@@ -75,6 +76,9 @@ echo $cv > "crossvalType.txt"
 ######---------------------------------------------------------
 ######    Input arguments
 dataset=`readlink -e $dataset_prefix.bed | sed 's/\.bed//'`
+
+echo $dataset
+echo ${dataset##*/}
 
 if [ -z "$dataset" ]
 then
@@ -98,7 +102,7 @@ tefilename=""
 start_time=`date +%s`
 dt=$(date +"%Y-%m-%d_%T");
 outdir=""
-pvals=( 50 100 200 300 500 1000 2000 )
+pvals=( 100 400 800 1200 1600 2000 )
 # pvals=( 100 500 1000 )
 # ratios=( "1:1" "1:1.25" "1:1.5" "1:2" "1:2.25" "1:2.5" "1:2.75" "1:3" )
 ratios=( "1:1")
@@ -138,10 +142,10 @@ then
             filename="${prefix}_SNPs_top_${value}.txt"
             # extract top 'k' p values
             # the 'top.assoc' file is found from the 'final_associations' step in the GWAS pipeline
-            awk -v var="$value" 'FNR < var+2 && FNR !=1 {print $2}' $assocfile > $filename
+            awk -v var="$value" 'FNR < var+2 && FNR !=1 {print $2}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" > $filename
 
             echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
-            ${PLINK2PATH} --bfile ${dataset##*/} \
+            ${PLINK2PATH} --bfile "/depot/pdrineas/data/DIMs/Repo/${dataset##*/}" \
                                             --extract $filename \
                                             --make-bed \
                                             --out "${dataset##*/}_extracted_${value}"
@@ -152,14 +156,14 @@ then
             # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
 
             # split between train and test
-            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset##*/}_extracted_${value}"
 
-            mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+            mv "${dataset##*/}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
 
             dirPrefix=`readlink -e ${prefix}_${type}_${value}`
 
-            trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
-            tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
+            trfilename="${dirPrefix}/${dataset##*/}_extracted_${value}_trainset"
+            tefilename="${dirPrefix}/${dataset##*/}_extracted_${value}_testset"
             # run the analytics
             python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
             # mv $filename $outdir
@@ -178,14 +182,14 @@ else
             # filename="${dataset}_${type}_extracted_${value}_stats_${dt}.out"
 
             # split between train and test
-            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset}_extracted_${value}"
+            bash bose_splitdata.sh --cases 300 --controls 300 "${dataset##*/}_extracted_${value}"
 
-            mv "${dataset}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
+            mv "${dataset##*/}_extracted_${value}"* "${filename}" "${prefix}_${type}_${value}/"
 
             dirPrefix=`readlink -e ${prefix}_${type}_${value}`
 
-            trfilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_trainset"
-            tefilename="${dirPrefix}/${dataset_prefix}_extracted_${value}_testset"
+            trfilename="${dirPrefix}/${dataset##*/}_extracted_${value}_trainset"
+            tefilename="${dirPrefix}/${dataset##*/}_extracted_${value}_testset"
             # run the analytics
             python DIMdetect2.py -tr $trfilename -te $tefilename -pf $prefix -cl $type -cv $cv -pval $value
             # mv $filename $outdir

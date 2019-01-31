@@ -164,7 +164,7 @@ if __name__ == '__main__':
         if classifiertype == 'LDA':
             # Parameters
             # Solver to use (options: 'svd', 'lsqr', and 'eigen')
-            solver_LDA = ['svd']
+            solver_LDA = ['svd']#,'lsqr','eigen']
             # Shrinkage parameter (options: None, 'auto' and 0 < float < 1)
             shrinkage = [None]
             # Class priors
@@ -185,11 +185,11 @@ if __name__ == '__main__':
             # Class priors
             priors = [None]
             # Regularization
-            reg_param = [0.0]
+            reg_param = [0.0,0.5,1.0,10.0,100.0]
             # Class covariance matrix
             store_covariance = [False]
             # Threshold for rank estimation
-            tol_QDA = [1.05e-4]
+            tol_QDA = [1.05e-4,1.05e-3,1.05e-5]
 
             iterations = list(itertools.product(priors,reg_param,store_covariance,tol_QDA))
 
@@ -213,7 +213,7 @@ if __name__ == '__main__':
         elif classifiertype == 'Ridge':
             # Parameters
             # Regularization strength
-            alpha = [0.001,0.01,0.1,1.0,10.0]
+            alpha = [0.001,0.01,0.1,0.5,1.0]
             # Intercept of the model
             fit_intercept = [True]
             # Normalize (subtract the mean and divide by L2 norm)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             # Max iterations for the solver
             max_iter = [None]
             # Precision of solution
-            tol_Ridge = [0.001]
+            tol_Ridge = [0.001,0.01,0.1]
             # Solver to use (options: 'auto', 'svd', 'cholesky', 'lsqr','sparse_cg', 'sag', and 'saga')
             solver_Ridge = ['auto']
             # Random seed
@@ -233,21 +233,21 @@ if __name__ == '__main__':
         elif classifiertype == 'Lasso':
             # Parameters
             # Regularization strength
-            alpha = [1.0]
+            alpha = [0.001,0.01,0.1,1.0]
             # Intercept of the model
             fit_intercept = [True]
             # Normalize (subtract the mean and divide by L2 norm)
             normalize = [False]
             # Max iterations for the solver
-            max_iter = [1000]
+            max_iter = [100,500,1000,2000]
             # Precision of solution
-            tol_Lasso = [0.001]
+            tol_Lasso = [0.001,0.01,0.1]
             # Set coefficients to be positive
             positive = [False]
             # Random seed
             random_state = [None]
             # Convergence method (options: 'cyclic' or 'random')
-            selection = ['cyclic']
+            selection = ['cyclic','random']
 
             iterations = list(itertools.product(alpha,fit_intercept,normalize,max_iter,tol_Lasso,positive,random_state,selection))
 
@@ -255,23 +255,23 @@ if __name__ == '__main__':
         elif classifiertype == 'Elastic':
             # Parameters
             # Regularization strength
-            alpha = [1.0]
+            alpha = [0.001,0.01,0.1,1.0]
             # Mixing parameter
-            l1_ratio = [0.5]
+            l1_ratio = [0.1,0.5,0.7]
             # Intercept of the model
             fit_intercept = [True]
             # Normalize (subtract the mean and divide by L2 norm)
             normalize = [False]
             # Max iterations for the solver
-            max_iter = [1000]
+            max_iter = [100,500,1000,2000]
             # Precision of solution
-            tol_Elastic = [0.001]
+            tol_Elastic = [0.001,0.01,0.1]
             # Set coefficients to be positive
             positive = [False]
             # Random seed
             random_state = [None]
             # Convergence method (options: 'cyclic' or 'random')
-            selection = ['cyclic']
+            selection = ['cyclic','random']
 
             iterations = list(itertools.product(alpha,l1_ratio,fit_intercept,normalize,max_iter,tol_Elastic,positive,random_state,selection))
 
@@ -279,9 +279,9 @@ if __name__ == '__main__':
         elif classifiertype == 'SVM':
             # Parameters
             # Penalty parameter of error term
-            C = [1.0]
+            C = [0.001,0.1,0.5,1.0]
             # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
-            kernel = ['rbf']
+            kernel = ['linear']
             # Degree of the polynomial kernel
             degree = [3]
             # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
@@ -293,13 +293,13 @@ if __name__ == '__main__':
             # Enable probability estimates
             probability = [False]
             # Stopping criterion
-            tol_SVM = [1e-3]
+            tol_SVM = [1e-3,1e-2,1e-1]
             # Verbose output
             verbose = [False]
             # Limit on iterations within solver
             max_iter = [-1]
             # One versus rest decision boundary or one versus one (options: 'ovr' and 'ovo')
-            decision_function_shape = ['ovr']
+            decision_function_shape = ['ovr','ovo']
             # Pseudo random number generator seed
             random_state = [None]
 
@@ -307,48 +307,53 @@ if __name__ == '__main__':
 
         #--------------------------------------------------------------------#
         elif classifiertype == 'SVR':
-                # Parameters
-                # Penalty parameter of error term
-                C = [1.0]
-                # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
-                kernel = ['rbf']
-                # Degree of the polynomial kernel
-                degree = [3]
-                # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
-                gamma = ['auto']
-                # Independent term in kernel function for 'poly' and 'sigmoid'
-                coef0 = [0.0]
-                # Shrinking heuristic
-                shrinking = [True]
-                # Stopping criterion
-                tol_SVR = [1e-3]
-                # Verbose output
-                verbose = [False]
-                # Limit on iterations within solver
-                max_iter = [-1]
-                # Epsilon for the margin
-                epsilon = [0.1]
-
-                iterations = list(itertools.product(C,kernel,degree,gamma,coef0,shrinking,tol_SVR,verbose,max_iter,epsilon))
-
-        #--------------------------------------------------------------------#
-        elif classifiertype == 'kSVM':
             # Parameters
             # Penalty parameter of error term
-            C = [1.0]
+            C = [0.001,0.5,1.0]
             # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
-            kernel = ['poly']
+            kernel = ['linear']
             # Degree of the polynomial kernel
             degree = [3]
             # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
             gamma = ['auto']
             # Independent term in kernel function for 'poly' and 'sigmoid'
+            coef0 = [0.0,0.5,1.0]
+            # Shrinking heuristic
+            shrinking = [True]
+            # Stopping criterion
+            tol_SVR = [1e-3,1e-2]
+            # Verbose output
+            verbose = [False]
+            # Limit on iterations within solver
+            max_iter = [-1]
+            # Epsilon for the margin
+            epsilon = [0.1,0.5]
+
+            iterations = list(itertools.product(C,kernel,degree,gamma,coef0,shrinking,tol_SVR,verbose,max_iter,epsilon))
+
+        #--------------------------------------------------------------------#
+        elif classifiertype == 'kSVM':
+            # Parameters
+            # Penalty parameter of error term
+            # C = [0.001,0.5,1.0]
+            C = [0.001]
+            # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
+            # kernel = ['poly','rbf','sigmoid']
+            kernel = ['poly']
+            # Degree of the polynomial kernel
+            degree = [3]
+            # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
+            # gamma = ['auto','scale']
+            gamma = ['auto']
+            # Independent term in kernel function for 'poly' and 'sigmoid'
+            # coef0 = [0.0,0.5,1.0]
             coef0 = [0.0]
             # Shrinking heuristic
             shrinking = [True]
             # Enable probability estimates
             probability = [False]
             # Stopping criterion
+            # tol_kSVM = [1e-3,1e-2]
             tol_kSVM = [1e-3]
             # Verbose output
             verbose = [False]
@@ -365,7 +370,7 @@ if __name__ == '__main__':
         elif classifiertype == 'RidgeSVM':
             # Parameters
             # Regularization strength
-            alpha = [1.0]
+            alpha = [0.001,0.01,0.1,1.0]
             # Intercept of the model
             fit_intercept = [True]
             # Normalize (subtract the mean and divide by L2 norm)
@@ -373,7 +378,7 @@ if __name__ == '__main__':
             # Max iterations for the solver
             max_iter = [None]
             # Precision of solution
-            tol_RidgeSVM = [0.001]
+            tol_RidgeSVM = [1e-3,1e-2]
             # Solver to use (options: 'auto', 'svd', 'cholesky', 'lsqr','sparse_cg', 'sag', and 'saga')
             solver_RidgeSVM = ['svd']
             # Random seed
@@ -386,7 +391,8 @@ if __name__ == '__main__':
         elif classifiertype == 'RFESVM':
             # Parameters
             # Penalty parameter of error term
-            C = [1.0]
+            # C = [0.001,0.1,0.5,1.0]
+            C = [0.001]
             # Number of features to select (None is actually half)
             n_features_to_select = [None]
             # Number of features to remove at each iteration
@@ -420,9 +426,9 @@ if __name__ == '__main__':
         elif classifiertype == 'RandomForest':
             # Parameters
             # Number of trees in the forest
-            n_estimators = [100]
+            n_estimators = [10,50,100]
             # Function to measure quality of the split (options: 'gini' or 'entropy')
-            criterion = ['gini']
+            criterion = ['gini','entropy']
             # Max depth of the trees
             max_depth = [None]
             # Minimum number of samples required to split a node

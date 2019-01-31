@@ -20,7 +20,7 @@ wb = Workbook()
 
 # add_sheet is used to create sheet.
 sheet1 = wb.add_sheet('Case Accuracy')
-
+sheet1.write(0,0,"Values")
 # Column labels
 counter = 1
 for type in args.typeList:
@@ -53,7 +53,7 @@ for SNP in args.pvalList:
 
 # add_sheet is used to create sheet.
 sheet2 = wb.add_sheet('Control Accuracy')
-
+sheet2.write(0,0,"Values")
 # Column labels
 counter = 1
 for type in args.typeList:
@@ -87,7 +87,7 @@ for SNP in args.pvalList:
 
 # add_sheet is used to create sheet.
 sheet3 = wb.add_sheet('F1 Score')
-
+sheet3.write(0,0,"Values")
 # Column labels
 counter = 1
 for type in args.typeList:
@@ -120,7 +120,7 @@ for SNP in args.pvalList:
 
 # add_sheet is used to create sheet.
 sheet4 = wb.add_sheet('Training Accuracy')
-
+sheet4.write(0,0,"Values")
 # Column labels
 counter = 1
 for type in args.typeList:
@@ -153,7 +153,7 @@ for SNP in args.pvalList:
 
 # add_sheet is used to create sheet.
 sheet5 = wb.add_sheet('Testing Accuracy')
-
+sheet5.write(0,0,"Values")
 # Column labels
 counter = 1
 for type in args.typeList:
@@ -180,7 +180,7 @@ for SNP in args.pvalList:
     sheet5.write(counter, 0, int(SNP))
     counter = counter + 1
 
-wb.save('tableValues.xls')
+wb.save(str(args.data)+'_tableValues.xls')
 
 # open the output csv
 with open(str(args.data)+'_caseaccuracy.csv', 'wb') as myCsvfile:
@@ -188,7 +188,7 @@ with open(str(args.data)+'_caseaccuracy.csv', 'wb') as myCsvfile:
     wr = csv.writer(myCsvfile, delimiter="\t")
 
     # open the xlsx file
-    myfile = xlrd.open_workbook('tableValues.xls')
+    myfile = xlrd.open_workbook(str(args.data)+'_tableValues.xls')
     # get a sheet
     mysheet = myfile.sheet_by_index(0)
 
@@ -202,7 +202,7 @@ with open(str(args.data)+'_controlaccuracy.csv', 'wb') as myCsvfile:
     wr = csv.writer(myCsvfile, delimiter="\t")
 
     # open the xlsx file
-    myfile = xlrd.open_workbook('tableValues.xls')
+    myfile = xlrd.open_workbook(str(args.data)+'_tableValues.xls')
     # get a sheet
     mysheet = myfile.sheet_by_index(1)
 
@@ -216,7 +216,7 @@ with open(str(args.data)+'_f1score.csv', 'wb') as myCsvfile:
     wr = csv.writer(myCsvfile, delimiter="\t")
 
     # open the xlsx file
-    myfile = xlrd.open_workbook('tableValues.xls')
+    myfile = xlrd.open_workbook(str(args.data)+'_tableValues.xls')
     # get a sheet
     mysheet = myfile.sheet_by_index(2)
 
@@ -230,7 +230,7 @@ with open(str(args.data)+'_trainingaccuracy.csv', 'wb') as myCsvfile:
     wr = csv.writer(myCsvfile, delimiter="\t")
 
     # open the xlsx file
-    myfile = xlrd.open_workbook('tableValues.xls')
+    myfile = xlrd.open_workbook(str(args.data)+'_tableValues.xls')
     # get a sheet
     mysheet = myfile.sheet_by_index(3)
 
@@ -244,7 +244,7 @@ with open(str(args.data)+'_testingaccuracy.csv', 'wb') as myCsvfile:
     wr = csv.writer(myCsvfile, delimiter="\t")
 
     # open the xlsx file
-    myfile = xlrd.open_workbook('tableValues.xls')
+    myfile = xlrd.open_workbook(str(args.data)+'_tableValues.xls')
     # get a sheet
     mysheet = myfile.sheet_by_index(4)
 
