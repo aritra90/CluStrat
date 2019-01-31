@@ -170,7 +170,7 @@ for type in args.typeList:
 
     for SNP in args.pvalList:
         # Write the values indexed by newcounter
-        sheet5.write(newcounter, counter, float(f1score_list[newcounter-1]))
+        sheet5.write(newcounter, counter, float(testingaccuracy_list[newcounter-1]))
         newcounter = newcounter + 1
     counter = counter + 1
 
