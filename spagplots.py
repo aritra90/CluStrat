@@ -1,5 +1,5 @@
 ###################################################################################
-#####	Author: Aritra Bose	
+#####	Author: Aritra Bose
 #####	Date: 26/01/2019
 ##### Spaghetti Plots for sensitivity and specificity for different classifiers
 ###################################################################################
@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.ticker as ticker
 import math
 import pandas as pd
-import os 
+import os
 
 def parse_arguments():
 	parser = argparse.ArgumentParser()
@@ -27,13 +27,15 @@ if __name__ == '__main__':
 	#change the delimiter as you will
 	df = pd.read_csv(datahandle, sep='\t')
 	xvals = [100,400,800,1200,1600,2000]
-	#threads = [1,2,3,4,5,6,7,8,9,10]
-	#plt.style.use('fivethirtyeight')
+
 	plt.style.use('bmh')
 	fig, ax = plt.subplots(1)
 	headers = df.dtypes.index
-	# multiple line plot; Put the entry (1,1) of the table as values. 
-	#A sample table looks like: 
+
+	color_arr = ['b','g','r','c','m','y','k','darkorange','goldenrod','gray','purple']
+
+	# multiple line plot; Put the entry (1,1) of the table as values.
+	#A sample table looks like:
 	#################################################################
 	# Values	LDA	QDA	PolyReg(k=3) PolyReg(k=8) SVM(poly=3)	SVM-linear	SVM-rbf	RFESVM	etc...
 	# 100
@@ -41,19 +43,18 @@ if __name__ == '__main__':
 	# 800
 	# ...
 	# ...
+	ctr = 0
 	for column in df.drop('Values', axis=1):
-		l1 = ax.plot(df['Values'], df[column], '-', marker='*', ms=8,linewidth=3.5, alpha=0.75)
-	#for column in df.drop('PCs', axis=1):
-	#	l2 = ax.plot(df['PCs'], df[column], '.-', marker='^', ms=8,linewidth=3.5, alpha=0.75)	
-		
-	#print(ax.get_yticks())
-	#ax.set_ylim([1,3])
+		l1 = ax.plot(df['Values'], df[column], '-', marker='*', ms=8,linewidth=3.5, alpha=0.75, label = column,color=color_arr[ctr])
+		ctr = ctr + 1
+
 	savename = fname+"_spagplot.png"
 	ax.set_yticks(ax.get_yticks()[1::2])
-	plt.xticks(threads,fontsize=8)
+	ax.legend(prop={'size': 10},loc='center left', bbox_to_anchor=(1, 0.5))
+	plt.xticks(xvals,fontsize=8)
 	plt.yticks(fontsize=8)\
-	plt.legend( prop={'size': 10})
-	plt.xlabel('# of threads', fontsize=10)
-	plt.ylabel('Speed-up', fontsize=10)
+	#plt.legend( prop={'size': 10})
+	plt.xlabel('# of SNPs', fontsize=10)
+	plt.ylabel('Accuracy', fontsize=10)
+	fig.suptitle(str(fname), fontsize=20)
 	fig.savefig(savename, bbox_inches='tight', dpi=800)
-	

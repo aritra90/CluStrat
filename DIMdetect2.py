@@ -335,13 +335,13 @@ if __name__ == '__main__':
         elif classifiertype == 'kSVM':
             # Parameters
             # Penalty parameter of error term
-            # C = [0.001,0.5,1.0]
-            C = [0.001]
+            C = [0.001,0.5,1.0]
+            # C = [1]
             # Type of kernel to use (options: 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed')
             # kernel = ['poly','rbf','sigmoid']
             kernel = ['poly']
             # Degree of the polynomial kernel
-            degree = [3]
+            degree = [8]
             # Kernel coefficient for 'rbf', 'poly', and 'sigmoid'
             # gamma = ['auto','scale']
             gamma = ['auto']

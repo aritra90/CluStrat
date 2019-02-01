@@ -34,8 +34,8 @@ function usage() {
 # cv="kfold"
 # dataset_prefix=""
 # help=""
-
-typelist=( "${type}" )
+IFS=' ' read -r -a typelist <<< "$type"
+echo ${typelist[@]}
 
 if [[ $help == "yes" ]];
 then
