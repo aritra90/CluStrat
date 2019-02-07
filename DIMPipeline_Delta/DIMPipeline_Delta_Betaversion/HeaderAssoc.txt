@@ -1,0 +1,1 @@
+ CHR                                             SNP         BP   A1      F_A      F_U   A2        CHISQ            P           OR 
