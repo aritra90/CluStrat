@@ -17,7 +17,9 @@
 #PBS -V
 
 # start job from the directory it was submitted
-cd /scratch/brown/mcburch/GWASPipeline/MLGWAS/DIMPipeline_Alpha
+#cd /scratch/brown/mcburch/GWASPipeline/MLGWAS/DIMPipeline_Alpha
+
+cd "$PBS_O_WORKDIR" || exit $?
 
 source /depot/pdrineas/data/gwas_scripts/software_paths.conf
 
