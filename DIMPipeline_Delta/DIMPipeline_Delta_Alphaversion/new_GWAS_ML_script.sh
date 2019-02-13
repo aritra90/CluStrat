@@ -114,11 +114,11 @@ prefix=""
 # echo ${dataset##*/}
 if [[ ${dataset##*/} == "SZHCGSRRS" ]];
 then
-    assocfile="SCZ_top.assoc"
+    assocfile="SCZ_allSNPs.assoc"
     prefix="SCZ"
 elif [[ ${dataset##*/} == "PKHCGSRRS" ]];
 then
-    assocfile="PRK_top.assoc"
+    assocfile="PRK_allSNPs.assoc"
     prefix="PRK"
 else
     echo "No associations file found..."
@@ -142,10 +142,8 @@ then
             fi
 
             filename="${prefix}_randSNPs_${value}.assoc"
-
-            awk 'NR==1' HeaderAssoc.txt > ${filename}
             
-            awk '{if(NR>1)print}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" | shuf -n ${value} >> ${filename}
+            awk '{print}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" | shuf -n ${value} >> ${filename}
 
             echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
             ${PLINK2PATH} --bfile "/depot/pdrineas/data/DIMs/Repo/${dataset##*/}" \

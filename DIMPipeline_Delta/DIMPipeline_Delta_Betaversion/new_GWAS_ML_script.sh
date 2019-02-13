@@ -114,11 +114,11 @@ prefix=""
 # echo ${dataset##*/}
 if [[ ${dataset##*/} == "SZHCGSRRS" ]];
 then
-    assocfile="SCZ_top.assoc"
+    assocfile="SCZ_allSNPs.assoc"
     prefix="SCZ"
 elif [[ ${dataset##*/} == "PKHCGSRRS" ]];
 then
-    assocfile="PRK_top.assoc"
+    assocfile="PRK_allSNPs.assoc"
     prefix="PRK"
 else
     echo "No associations file found..."
@@ -130,9 +130,6 @@ bash bose_splitdata.sh --cases 1500 --controls 1500 "${dataset##*/}"
 
 # RUN GWAS ON THE TRAINSET
 bash pipeline.sh "${dataset##*/}_trainset"
-
-# MOVE THE ASSOC FILE TO THE ONE USED HERE
-cp "${dataset##*/}_trainset_qcind_qcsnp_assoc_ibdout/${dataset##*/}_trainset_qcind_qcsnp_assoc_top.assoc" "${assocfile}"
 
 # for different algorithm types...
 for type in "${typelist[@]}"
@@ -149,9 +146,7 @@ do
 
         filename="${prefix}_randSNPs_${value}.assoc"
 
-        awk 'NR==1' HeaderAssoc.txt > ${filename}
-
-        awk '{if(NR>1)print}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" | shuf -n ${value} >> ${filename}
+        awk '{print}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" | shuf -n ${value} >> ${filename}
 
         # Extract for the trainset
         echo -e '╔════════════════════════════════════════════════════════════════════════════╗'
