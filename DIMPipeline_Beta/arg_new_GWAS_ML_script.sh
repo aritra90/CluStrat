@@ -30,11 +30,13 @@ function usage() {
     echo ""
 }
 
-# # Default values
-# extract=""
-# type="LDA"
-# cv="kfold"
-# dataset_prefix=""
+# dataset_prefix=/depot/pdrineas/data/DIMs/Repo/PKHCGSRRS,cv=kfold,type="Ridge LDA RidgeSVM"
+
+# default values
+# extract=
+type=$3
+cv=$2
+dataset_prefix=$1
 # help=""
 IFS=' ' read -r -a typelist <<< "$type"
 echo ${typelist[@]}
@@ -132,7 +134,7 @@ bash bose_splitdata.sh --cases 1500 --controls 1500 "${dataset##*/}"
 bash pipeline.sh "${dataset##*/}_trainset"
 
 # MOVE THE ASSOC FILE TO THE ONE USED HERE
-cp "${dataset##*/}_trainset_qcind_qcsnp_assoc_ibdout/${dataset##*/}_trainset_qcind_qcsnp_logistic_1_top.assoc.logistic" "${assocfile}" 
+head -n 2001 "${dataset##*/}_trainset_qcind_qcsnp_assoc_ibdout/${dataset##*/}_trainset_qcind_qcsnp_logistic_1_top.assoc.logistic" > "${assocfile}" 
 
 # for different algorithm types...
 for type in "${typelist[@]}"
