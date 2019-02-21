@@ -36,6 +36,10 @@ function usage() {
 # cv="kfold"
 # dataset_prefix=""
 # help=""
+
+type=$3
+cv=$2
+dataset_prefix=$1
 IFS=' ' read -r -a typelist <<< "$type"
 echo ${typelist[@]}
 

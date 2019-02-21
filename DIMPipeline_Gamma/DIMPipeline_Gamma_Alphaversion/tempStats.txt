@@ -1,8 +1,8 @@
 #--------------------------------------------------------------------#
-Accuracy for top 4 SNPs extracted: 0.775
+Accuracy for top 4 SNPs extracted: 0.65
 #--------------------------------------------------------------------#
-Accuracy for top 8 SNPs extracted: 0.825
+Accuracy for top 8 SNPs extracted: 0.75
 #--------------------------------------------------------------------#
-Accuracy for top 16 SNPs extracted: 0.725
+Accuracy for top 16 SNPs extracted: 0.9
 #--------------------------------------------------------------------#
-Accuracy for top 22 SNPs extracted: 0.775
+Accuracy for top 22 SNPs extracted: 0.925

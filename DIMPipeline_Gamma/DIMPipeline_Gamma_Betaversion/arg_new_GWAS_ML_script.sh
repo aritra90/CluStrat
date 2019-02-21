@@ -36,6 +36,10 @@ function usage() {
 # cv="kfold"
 # dataset_prefix=""
 # help=""
+
+type=$3
+cv=$2
+dataset_prefix=$1
 IFS=' ' read -r -a typelist <<< "$type"
 echo ${typelist[@]}
 
@@ -134,7 +138,7 @@ bash bose_splitdata.sh --cases 1500 --controls 1500 "${dataset##*/}"
 bash pipeline.sh "${dataset##*/}_trainset"
 
 # MOVE THE ASSOC FILE TO THE ONE USED HERE
-cp "${dataset##*/}_trainset_qcind_qcsnp_assoc_ibdout/${dataset##*/}_trainset_qcind_qcsnp_logistic_1_top.assoc.logistic" "${assocfile}"
+head -n 2001 "${dataset##*/}_trainset_qcind_qcsnp_assoc_ibdout/${dataset##*/}_trainset_qcind_qcsnp_logistic_1_top.assoc.logistic" > "${assocfile}"
 
 # for different algorithm types...
 for type in "${typelist[@]}"
@@ -151,7 +155,7 @@ do
 
         filename="top${value}chroms.assoc"
 
-        awk '{print $1}' "/depot/pdrineas/data/DIMs/Repo/${assocfile}" | sort -g | cat | uniq -c > "numOfSNPsPerChrom.txt"
+        awk '{print $1}' "${assocfile}" | sort -g | cat | uniq -c > "numOfSNPsPerChrom.txt"
 
         sed -i '1d' "numOfSNPsPerChrom.txt"
 
