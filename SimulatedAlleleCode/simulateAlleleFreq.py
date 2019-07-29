@@ -1,18 +1,134 @@
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import pandas as pd
 import numpy as np
 import sys, csv, os, math, subprocess, itertools, time, random
+from operator import add
 from datetime import datetime
 
 from sklearn.cluster import KMeans
 from scipy.stats.distributions import chi2
 from scipy.spatial.distance import pdist
+import normalize, traitSim, ArmitChisq, EigStrat, getMH, CluStrat
+from plinkio.plinkfile import WritablePlinkFile, Sample, Locus
 
-import normalize, traitSim, ArmitChisq, EigStrat, CluStrat, getMH
+def matrix_sketch(X, k):
+    # # Calculate sketch parameters based on design matrix
+    #
+    # # Gaussian normal test matrices
+    # mu, sigma = 0, 1
+    # # This is the sketch we are concerned about because we are reducing the larger dimension
+    # Omega = np.random.normal(mu, sigma, (X.shape[0],k))
+    # sketch_X = np.matmul(X,Omega)
+    #
+    # # Psi = np.random.normal(mu, sigma, (l, X.shape[1]))
+    # # sketch_X = np.matmul(Psi, X)
+
+    # ############################################################################
+    # # Set sketch parameters
+    # # sufficiently large constant (c2 > 3330*15e2)
+    # C = 4000*15e2
+    # # 0 < epsilon < 1/3
+    # epsilon = np.random.uniform(low = 2.22045e-16, high = .3333333)
+    # # number of artificial features (do we guarantee that r < m for X in nxm?)
+    # # m > k so maybe this is the only constraint needed
+    # r = int(C*(k/epsilon**2))
+    # # Fill the random matrix
+    # Omega = np.random.choice([1/math.sqrt(r),-1/math.sqrt(r)],p=[0.5,0.5], size=(X.shape[0],r))
+    # # Compute the sketch
+    # sketch_X = np.matmul(X, Omega)
+
+    ############################################################################
+    # Set sketch parameters
+    r = k
+    # Fill the random matrix
+    mu = 0
+    sigma = 1.0/r
+    Omega = np.random.normal(mu, sigma, (X.shape[1],r))
+    # Compute the sketch
+    sketch_X = np.matmul(X, Omega)
+
+    return sketch_X.T
+
+def convert2plink(X, status, model_flag):
+
+    #create fake sample IDs
+    sampleIDs = [str(model_flag)+"000"+str(s) for s in range(1,X.shape[1]+1)]
+    #create fake rsIDs
+    rsIDs = ["rs000"+str(s) for s in range(1,X.shape[0]+1)]
+    #create fake positions increasing randomly between 200 and 20k centimorgans
+    snpPositions = [float(s) for s in range(70000,70000+X.shape[0])]
+    for k in range(1,X.shape[0]):
+        snpPositions[k] = snpPositions[k-1] + random.randint(200,1000)
+
+    # print(snpPositions)
+    # print(' ')
+    # print(sampleIDs)
+    # print(" ")
+    # print(rsIDs)
+
+    list_of_Samples = []
+    # Create samples
+    for i in range(0,X.shape[1]):
+        list_of_Samples.append(Sample(sampleIDs[i], sampleIDs[i], 0, 0, -9, status[i]))
+
+    # print(list_of_Samples)
+
+    list_of_Loci = []
+    # Create loci
+    for j in range(0,X.shape[0]):
+        rng = random.randint(0,1)
+        if rng == 0:
+            alleles = ['A','T']
+        else:
+            alleles = ['C','G']
+
+        # Choosing to encode 0 as 'A'/'C' and 2 as 'T'/'G'
+        # Get the allele frequencies
+        allele_counts = np.unique(X[j,:], return_counts = True)
+        # print(allele_counts)
+        # if 0,1,2 all occur in the SNP...
+        if allele_counts[0].shape[0] == 3:
+            if allele_counts[1][0] < allele_counts[1][2]:
+                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+            else:
+                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+        else:
+            if 0 in allele_counts[0] and 1 in allele_counts[0]:
+                # print("no occurrences of '2'...")
+                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+            elif 0 in allele_counts[0] and 2 in allele_counts[0]:
+                # print("no occrrences of '1'...")
+                if allele_counts[1][0] < allele_counts[1][1]:
+                    list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                else:
+                    list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+            else:
+                # print("no occurrences of '0'...")
+                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+            # sys.exit(0)
+
+    file_prefix = 'sim_plinkfiles/cluster_'+model_flag+'_'+str(random.randint(0, 9999999))
+    print('File prefix: '+file_prefix)
+
+    # Create PLINK files corresponding to the data
+    plink_obj = WritablePlinkFile(file_prefix,list_of_Samples)
+    # plink_obj = WritablePlinkFile(file_prefix,[Sample('0', '0', '0', '0', 0, 0)])
+
+
+    for i in range(0,X.shape[0]):
+        # print(X[i,:])
+        # print(X[i,:].shape)
+        plink_obj.write_row(list_of_Loci[i], X[i,:])
+    # plink_obj.loci = list_of_Loci
+
+    # print("YAY")
+    # sys.exit(0)
+
+    return plink_obj
 
 if len(sys.argv) == 1:
     model_flag = "BN"
@@ -22,6 +138,7 @@ else:
 print("Model type: ", model_flag)
 
 plot_flag = 1
+sketch_flag = 1
 
 start = time.time()
 
@@ -294,8 +411,19 @@ if model_flag == "HGDP" or "TGP":
 
 # % simulating X using binomial distribution of estimated F
 X = np.random.binomial(2, F)
-# print(X)
+print(X)
+print(X.shape)
+print(" ")
 
+################################################################################
+if sketch_flag == 1:
+    X = matrix_sketch(X.T,500)
+    print(X)
+    print(X.shape)
+    print(" ")
+    m = X.shape[0]
+    n = X.shape[1]
+################################################################################
 
 # # % if A is a matrix, then sum(A,2) is a column vector containing the sum of each row.
 idxzer = np.where(~X.any(axis=1))[0]
@@ -309,7 +437,9 @@ X[idxzer,random.randint(0,n-1)] = 1;
 # # %standardize by the 2*p*(1-p)
 # # % same as normalize(X,2)
 normX = normalize.norm(X,0);
-print(normX)
+# print(normX)
+# print(normX.shape)
+# sys.exit(0)
 
 # % proportions of genetic, environmental and noise contributions
 # % respectively for simulated traits (one of the 3 configs from paper)
@@ -319,6 +449,15 @@ v = [10, 0, 90]
 # % the strategy simulates non-genetic effects and random variation
 traits, status = traitSim.simulate(normX,S,v,m,n,d)
 Y = status
+
+# ###############################################################################
+# # Write data in cluster to plink formatted file
+# if not os.path.exists('sim_plinkfiles'):
+#     os.makedirs('sim_plinkfiles')
+#
+# new_plinkfile = convert2plink(X,Y,model_flag)
+# ###############################################################################
+
 
 # % Get p-values based on correlation between each individual and the status
 # % (for every SNP)
@@ -370,6 +509,7 @@ candSNP2 = adjsigset.shape[0]
 D = pdist(normX.T)
 dele = [0, 1, 2, 3, 4]
 normR = normX.T
+
 # hierarchical clustering of individuals
 # pdist(X) returns the Euclidean distance between pairs of observations in X.
 clustering_time = time.time()
@@ -425,10 +565,6 @@ if(plot_flag == 1):
         plt.savefig('top2PCs.png')
         # plt.show()
     # else:
-
-
-
-
 
 
 end = time.time()
