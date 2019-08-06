@@ -1,6 +1,8 @@
+from __future__ import division
+from __future__ import absolute_import
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
-matplotlib.use("Agg")
+matplotlib.use(u"Agg")
 import matplotlib.pyplot as plt
 
 import pandas as pd
@@ -15,15 +17,17 @@ from scipy.spatial.distance import pdist
 import normalize, traitSim, ArmitChisq, EigStrat, getMH, CluStrat
 from plinkio.plinkfile import WritablePlinkFile, Sample, Locus
 
-def convert2plink(X, status, model_flag, model_directory):
+import pdb
+
+def convert2plink(X, status, model_flag, model_directory, continuous_trait=None):
 
     #create fake sample IDs
-    sampleIDs = [str(model_flag)+"000"+str(s) for s in range(1,X.shape[1]+1)]
+    # sampleIDs = [unicode(model_flag)+u"000"+unicode(s) for s in xrange(1,X.shape[1]+1)]
     #create fake rsIDs
-    rsIDs = ["rs000"+str(s) for s in range(1,X.shape[0]+1)]
+    rsIDs = [u"rs000"+unicode(s) for s in xrange(1,X.shape[0]+1)]
     #create fake positions increasing randomly between 200 and 20k centimorgans
-    snpPositions = [float(s) for s in range(70000,70000+X.shape[0])]
-    for k in range(1,X.shape[0]):
+    snpPositions = [float(s) for s in xrange(70000,70000+X.shape[0])]
+    for k in xrange(1,X.shape[0]):
         snpPositions[k] = snpPositions[k-1] + random.randint(200,1000)
 
     # print(snpPositions)
@@ -32,56 +36,83 @@ def convert2plink(X, status, model_flag, model_directory):
     # print(" ")
     # print(rsIDs)
 
-    list_of_Samples = []
-    # Create samples
-    for i in range(0,X.shape[1]):
-        list_of_Samples.append(Sample(sampleIDs[i], sampleIDs[i], 0, 0, -9, status[i]))
+    if continuous_trait is None:
+        list_of_Samples = []
+        # Create samples
+        for i in range(X.shape[1]):
+            # print sampleIDs[i]
+            num = i+1
+            fid = '%d'%num
+            iid = fid
+            father_iid = fid
+            mother_iid = fid
+            list_of_Samples.append(Sample(fid, iid, father_iid, mother_iid, -9, status[i]))
 
-    # print(list_of_Samples)
+        # sys.exit(0)
+        # print(list_of_Samples)
+        # print(len(list_of_Samples))
+    else:
+        list_of_Samples = []
+        # Create samples
+        for i in range(X.shape[1]):
+            # print sampleIDs[i]
+            num = i+1
+            fid = '%d'%num
+            iid = fid
+            father_iid = fid
+            mother_iid = fid
+            list_of_Samples.append(Sample(fid, iid, father_iid, mother_iid, -9, 2, continuous_trait[i]))
+
+        # sys.exit(0)
+        # print(list_of_Samples)
+        # print(len(list_of_Samples))
 
     list_of_Loci = []
     # Create loci
-    for j in range(0,X.shape[0]):
+    for j in xrange(0,X.shape[0]):
         rng = random.randint(0,1)
         if rng == 0:
-            alleles = ['A','T']
+            alleles = [u'A',u'T']
         else:
-            alleles = ['C','G']
+            alleles = [u'C',u'G']
 
-        # Choosing to encode 0 as 'A'/'C' and 2 as 'T'/'G'
+        # Choosing to encode rng = 0 as allele 'A'/'C' and 2 as allele 'T'/'G' (1 as heterozygous occurrences)
         # Get the allele frequencies
         allele_counts = np.unique(X[j,:], return_counts = True)
         # print(allele_counts)
         # if 0,1,2 all occur in the SNP...
         if allele_counts[0].shape[0] == 3:
+            # Determine which is the minor allele and place that allele as the first allele argument
             if allele_counts[1][0] < allele_counts[1][2]:
-                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
             else:
-                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
         else:
             if 0 in allele_counts[0] and 1 in allele_counts[0]:
                 # print("no occurrences of '2'...")
-                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
             elif 0 in allele_counts[0] and 2 in allele_counts[0]:
                 # print("no occrrences of '1'...")
                 if allele_counts[1][0] < allele_counts[1][1]:
-                    list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                    list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
                 else:
-                    list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                    list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
             else:
-                # print("no occurrences of '0'...")
-                list_of_Loci.append(Locus(0, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                # print("no occurrences of '0'...") then its automatically the minor allele cause it doesnt show up
+                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
             # sys.exit(0)
 
     file_prefix = model_directory+'/simdata_'+model_flag+'_'+str(random.randint(0, 9999999))
-    print('File prefix: '+file_prefix)
+    print u'File prefix: '+file_prefix
 
     # Create PLINK files corresponding to the data
+    # pdb.set_trace()
+    # Sample(fid, iid, iid, iid, sex, affection, phenotype = 0.0)
     plink_obj = WritablePlinkFile(file_prefix,list_of_Samples)
     # plink_obj = WritablePlinkFile(file_prefix,[Sample('0', '0', '0', '0', 0, 0)])
 
 
-    for i in range(0,X.shape[0]):
+    for i in xrange(0,X.shape[0]):
         # print(X[i,:])
         # print(X[i,:].shape)
         plink_obj.write_row(list_of_Loci[i], X[i,:])
@@ -89,36 +120,43 @@ def convert2plink(X, status, model_flag, model_directory):
 
     # print("YAY")
     # sys.exit(0)
+    plink_obj.close()
+    del plink_obj
+    del list_of_Samples
+    del list_of_Loci
 
-    return plink_obj
+    # return plink_obj
 
 # Create 5 simulated datasets for each model and set of proportions (60 total datasets)
-model_flags = ["BN","PSD","HGDP","TGP"]
+# model_flags = ["BN"]
+model_flags = [u"BN",u"PSD",u"HGDP",u"TGP"]
 # % proportions of genetic, environmental and noise contributions
 # % respectively for simulated traits (one of the 3 configs from paper)
 v_set = [[10, 0, 90],[20, 10, 70],[5, 5, 90]]
 
 nums = [1,2,3,4,5]
 
-for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
-    print(model_flag)
-    print(v)
-    print(ctr)
-    print(" ")
+trait_flag = [0,1]
+
+for model_flag, v, ctr, trait_flag in list(itertools.product(model_flags,v_set,nums,trait_flag)):
+    print model_flag
+    print v
+    print ctr
+    print u" "
 
 
-    if model_flag == "BN":
+    if model_flag == u"BN":
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # %%%%%%% Load HapMap Info
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        HM_inf = pd.read_csv('CEUASWMEX_fst_frq.txt',sep=' ')
+        HM_inf = pd.read_csv(u'CEUASWMEX_fst_frq.txt',sep=u' ')
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # %get allele freq and Fst for each SNP
 
         # % allele freq: frequency (proportion) of that SNP in the data
         # % Fst: % of contribution to the total genetic variation that each SNP has
-        frq = HM_inf['FRQ'].values #cell2mat(HM_inf(:,4));
-        Fst = HM_inf['FST'].values #cell2mat(HM_inf(:,3));
+        frq = HM_inf[u'FRQ'].values #cell2mat(HM_inf(:,4));
+        Fst = HM_inf[u'FST'].values #cell2mat(HM_inf(:,3));
 
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         #
@@ -147,7 +185,7 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
         # %populate the allele freq matrix from BN with (p,F) from HapMap
         # % for each SNP...
-        for i in range(0,m):
+        for i in xrange(0,m):
             # each row will generate 'd' variates drawing from this distribution
             G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
 
@@ -159,7 +197,7 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
         # % Treating the probabilities as ranges
         # % 1: <60/210, 2: bet. 60/210 and 120/210, 3: >=120/210
         popidx = np.zeros((n,1));
-        for i in range(0,n):
+        for i in xrange(0,n):
             p = random.uniform(0, 1);
             if p < (60.0/210):
                 pick = 1;
@@ -174,18 +212,18 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
             S[pick-1,i] = 1;
             # Leaving all other values at zero (indiv only assigned to one subpop)
 
-    elif model_flag == "PSD":
+    elif model_flag == u"PSD":
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # %%%%%%% Load HapMap Info
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        HM_inf = pd.read_csv('CEUASWMEX_fst_frq.txt',sep=' ')
+        HM_inf = pd.read_csv(u'CEUASWMEX_fst_frq.txt',sep=u' ')
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # %get allele freq and Fst for each SNP
 
         # % allele freq: frequency (proportion) of that SNP in the data
         # % Fst: % of contribution to the total genetic variation that each SNP has
-        frq = HM_inf['FRQ'].values #cell2mat(HM_inf(:,4));
-        Fst = HM_inf['FST'].values #cell2mat(HM_inf(:,3));
+        frq = HM_inf[u'FRQ'].values #cell2mat(HM_inf(:,4));
+        Fst = HM_inf[u'FST'].values #cell2mat(HM_inf(:,3));
 
         # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         #
@@ -214,7 +252,7 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
         # %populate the allele freq matrix from BN with (p,F) from HapMap
         # % for each SNP...
-        for i in range(0,m):
+        for i in xrange(0,m):
             # each row will generate 'd' variates drawing from this distribution
             G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
 
@@ -228,14 +266,14 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
         alpha = 0.1*np.ones((d,1))
         popidx = np.zeros((n,1));
-        for i in range(0,n):
-            for j in range(0,d):
+        for i in xrange(0,n):
+            for j in xrange(0,d):
                 S[j,i] = np.random.gamma(alpha[j],1)
 
             S[:,i] = S[:,i]/np.sum(S[:,i])
             I = np.argmax(S[:,i])
             popidx[i] = I+1
-    elif model_flag == "HGDP":
+    elif model_flag == u"HGDP":
         # REMEMBER: 'n' here is INDIVIDUALS not SNPs
         # Downsampling for simulation (computationally easier)
         m = int(1e4) #number of SNPs
@@ -257,47 +295,47 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
         #populate the allele freq matrix from BN with (p,F) from HapMap
         # for each SNP...
-        for i in range(0,m):
+        for i in xrange(0,m):
             # each row will generate 'd' variates drawing from this distribution
             G[i,:] = 0.9*np.random.uniform(0, 0.5, size=d)
 
         # set last column to 0.05 per Song et al. 2015
         G[:,d-1] = 0.05;
 
-        HGDP_PCs = pd.read_csv('pruned_HGDP_topPops_singVecs.txt',sep=' ',header=None)
+        HGDP_PCs = pd.read_csv(u'pruned_HGDP_topPops_singVecs.txt',sep=u' ',header=None)
         topPCs = HGDP_PCs.values
 
-        for i in range(0,d):
+        for i in xrange(0,d):
            S[i,:] = (topPCs[:,i]-np.min(topPCs[:,i]))/(np.max(topPCs[:,i])-np.min(topPCs[:,i]))
         S[d-1,:] = 1
 
         popidx = np.zeros((n,1));
 
-        HGDP_subpops = pd.read_csv('subpops_pruned_HGDP.txt',sep=' ',header=None)
+        HGDP_subpops = pd.read_csv(u'subpops_pruned_HGDP.txt',sep=u' ',header=None)
 
-        for i in range(0,HGDP_subpops.values.shape[0]):
-            if HGDP_subpops.values[i] == "Biaka_Pygmies":
+        for i in xrange(0,HGDP_subpops.values.shape[0]):
+            if HGDP_subpops.values[i] == u"Biaka_Pygmies":
                 popidx[i] = 1;
-            elif HGDP_subpops.values[i] == "French":
+            elif HGDP_subpops.values[i] == u"French":
                 popidx[i] = 2;
-            elif HGDP_subpops.values[i] == "Han":
+            elif HGDP_subpops.values[i] == u"Han":
                 popidx[i] = 3;
-            elif HGDP_subpops.values[i] == "Japanese":
+            elif HGDP_subpops.values[i] == u"Japanese":
                 popidx[i] = 4;
-            elif HGDP_subpops.values[i] == "Palestinian":
+            elif HGDP_subpops.values[i] == u"Palestinian":
                 popidx[i] = 5;
-            elif HGDP_subpops.values[i] == "Papuan":
+            elif HGDP_subpops.values[i] == u"Papuan":
                 popidx[i] = 6;
-            elif HGDP_subpops.values[i] == "Pima":
+            elif HGDP_subpops.values[i] == u"Pima":
                 popidx[i] = 7;
-            elif HGDP_subpops.values[i] == "Russian":
+            elif HGDP_subpops.values[i] == u"Russian":
                 popidx[i] = 8;
-            elif HGDP_subpops.values[i] == "Sardinian":
+            elif HGDP_subpops.values[i] == u"Sardinian":
                 popidx[i] = 9;
             else:
                 # Sindhi
                 popidx[i] = 10;
-    elif model_flag == "TGP":
+    elif model_flag == u"TGP":
         # REMEMBER: 'n' here is INDIVIDUALS not SNPs
         # Downsampling for simulation (computationally easier)
         m = int(1e4) #number of SNPs
@@ -319,48 +357,48 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
         #populate the allele freq matrix from BN with (p,F) from HapMap
         # for each SNP...
-        for i in range(0,m):
+        for i in xrange(0,m):
             # each row will generate 'd' variates drawing from this distribution
             G[i,:] = 0.9*np.random.uniform(0, 0.5, size=d)
 
         # set last column to 0.05 per Song et al. 2015
         G[:,d-1] = 0.05;
 
-        TGP_PCs = pd.read_csv('pruned_TGP_topPops_singVecs.txt',sep=' ',header=None)
+        TGP_PCs = pd.read_csv(u'pruned_TGP_topPops_singVecs.txt',sep=u' ',header=None)
         topPCs = TGP_PCs.values
 
-        for i in range(0,d):
+        for i in xrange(0,d):
            S[i,:] = (topPCs[:,i]-np.min(topPCs[:,i]))/(np.max(topPCs[:,i])-np.min(topPCs[:,i]))
         S[d-1,:] = 1
 
         popidx = np.zeros((n,1));
 
-        TGP_subpops = pd.read_csv('subpops_pruned_TGP.txt',sep=' ',header=None)
+        TGP_subpops = pd.read_csv(u'subpops_pruned_TGP.txt',sep=u' ',header=None)
 
-        for i in range(0,TGP_subpops.values.shape[0]):
-            if TGP_subpops.values[i] == "CHB":
+        for i in xrange(0,TGP_subpops.values.shape[0]):
+            if TGP_subpops.values[i] == u"CHB":
                 popidx[i] = 1;
-            elif TGP_subpops.values[i] == "CHS":
+            elif TGP_subpops.values[i] == u"CHS":
                 popidx[i] = 2;
-            elif TGP_subpops.values[i] == "GIH":
+            elif TGP_subpops.values[i] == u"GIH":
                 popidx[i] = 3;
-            elif TGP_subpops.values[i] == "GWD":
+            elif TGP_subpops.values[i] == u"GWD":
                 popidx[i] = 4;
-            elif TGP_subpops.values[i] == "IBS":
+            elif TGP_subpops.values[i] == u"IBS":
                 popidx[i] = 5;
-            elif TGP_subpops.values[i] == "JPT":
+            elif TGP_subpops.values[i] == u"JPT":
                 popidx[i] = 6;
-            elif TGP_subpops.values[i] == "PUR":
+            elif TGP_subpops.values[i] == u"PUR":
                 popidx[i] = 7;
-            elif TGP_subpops.values[i] == "STU":
+            elif TGP_subpops.values[i] == u"STU":
                 popidx[i] = 8;
-            elif TGP_subpops.values[i] == "TSI":
+            elif TGP_subpops.values[i] == u"TSI":
                 popidx[i] = 9;
             else:
                 # YRI
                 popidx[i] = 10;
     else:
-        print("Not a valid model type! Options are BN, PSD, HGDP or TGP.")
+        print u"Not a valid model type! Options are BN, PSD, HGDP or TGP."
         sys.exit(0)
 
     # %Get the allele frequency matrix for each individual (SNP -by- indiv)
@@ -368,7 +406,7 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
     # % Hao 2015 paper
     F = np.matmul(G,S)
 
-    if model_flag == "HGDP" or "TGP":
+    if model_flag == u"HGDP" or u"TGP":
         #####################################
         # Normalize F by column (making sure each column i.e. individual is bet. [0 1])
         F = F/F.max(axis=0)
@@ -376,9 +414,10 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
 
     # % simulating X using binomial distribution of estimated F
     X = np.random.binomial(2, F)
-    print(X)
-    print(X.shape)
-    print(" ")
+    print X
+    # will show num_snps x num_indivs
+    print X.shape
+    print u" "
 
     # # % if A is a matrix, then sum(A,2) is a column vector containing the sum of each row.
     idxzer = np.where(~X.any(axis=1))[0]
@@ -392,7 +431,7 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
     # # %standardize by the 2*p*(1-p)
     # # % same as normalize(X,2)
     normX = normalize.norm(X,0);
-    print(normX)
+    print normX
     # print(normX.shape)
     # sys.exit(0)
 
@@ -400,6 +439,10 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
     # % the strategy simulates non-genetic effects and random variation
     traits, status = traitSim.simulate(normX,S,v,m,n,d)
     Y = status
+    # print status
+    # print traits
+    # print type(traits)
+    # sys.exit(0)
 
     ###############################################################################
     # Write data in cluster to plink formatted file
@@ -410,9 +453,21 @@ for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
     else:
         prop = 3
 
-    model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)
-    if not os.path.exists(model_directory):
-        os.makedirs(model_directory)
+    if trait_flag == 0:
+        model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)+'/binary'
+        if not os.path.exists(model_directory):
+            os.makedirs(model_directory)
 
-    new_plinkfile = convert2plink(X,Y,model_flag, model_directory)
+        # model_directory = u" " #os.path.abspath(model_directory)
+
+        convert2plink(X,status,model_flag, model_directory)
+    else:
+        model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)+'/continuous'
+        if not os.path.exists(model_directory):
+            os.makedirs(model_directory)
+
+        # model_directory = u" " #os.path.abspath(model_directory)
+
+        convert2plink(X,status,model_flag, model_directory, continuous_trait=traits)
+
     ###############################################################################
