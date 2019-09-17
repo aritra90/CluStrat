@@ -14,7 +14,7 @@ from datetime import datetime
 from sklearn.cluster import KMeans
 from scipy.stats.distributions import chi2
 from scipy.spatial.distance import pdist
-import normalize, traitSim, ArmitChisq, EigStrat, getMH, CluStrat
+import normalize, traitSim #, ArmitChisq, EigStrat, getMH, CluStrat
 from plinkio.plinkfile import WritablePlinkFile, Sample, Locus
 
 import pdb
