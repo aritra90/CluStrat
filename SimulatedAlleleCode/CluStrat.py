@@ -41,13 +41,13 @@ def ridge_pvals(X, Y):
     regr.fit(X,Y)
     y_pred = regr.predict(X) 
     print("\n =============== \n")
- 
+	
     #print("\n Lambda is : "+str(regr.alpha_))
     print("\n R2 score : "+str(regr.score(X,Y)))
     print("\n MSE : " + str(metrics.mean_squared_error(y_pred, Y)))
     print("\n =============== \n")
     #alpha = regr.alpha_ 
-    
+   
     pvals = RS.coef_pval(regr, X, Y, regr.alpha_)	
     return pvals
 	

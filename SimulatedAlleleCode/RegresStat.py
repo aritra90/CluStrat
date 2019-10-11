@@ -148,12 +148,18 @@ def coef_se(clf, X, y, alpha):
 
     X1 = np.hstack((np.ones((n, 1)), np.matrix(X)))
     m = X1.shape[1]
+
     #print((X1.T*X1).shape)
     #print("alpha : " + str(alpha) + " and m is " + str(m))
 	
-    se_coeff = np.sqrt(metrics.mean_squared_error(y, clf.predict(X))
-		* np.diagonal(np.linalg.inv(X1.T*X1 + alpha*np.eye(m))))
-	
+    #se_coeff = np.sqrt(metrics.mean_squared_error(y, clf.predict(X))
+	#	* np.diagonal(np.linalg.inv((X1*X1.T + alpha*np.eye(n))**2)))
+	coeff = np.zeros(m)
+	for i in range(m):
+        b1 = np.linalg.inv(X1.dot(X1.T) + alpha*np.eye(n)).dot(X1[:,i])
+		coeff[i] = np.linalg.norm(b1)**2
+    
+    se_coeff = np.sqrt(mean_squared_error(y,clf.predict(X))*coeff)
     # se_matrix = scipy.linalg.sqrtm(
         # metrics.mean_squared_error(y, clf.predict(X)) *
         # np.linalg.pinv(X1.T * X1)
@@ -166,7 +172,7 @@ def coef_se(clf, X, y, alpha):
     return se_coeff
 
 
-def coef_tval(clf, X, y, alpha):
+def coef_tval(clf, X, y, alpha, beta):
     """Calculate t-statistic for beta coefficients.
 
     Parameters
@@ -183,8 +189,12 @@ def coef_tval(clf, X, y, alpha):
     numpy.ndarray
         An array of t-statistic values.
     """
+    #a = np.array(clf.intercept_ / coef_se(clf, X, y, alpha)[0])
+    #b = np.array(clf.coef_ / coef_se(clf, X, y, alpha)[1:])
     a = np.array(clf.intercept_ / coef_se(clf, X, y, alpha)[0])
     b = np.array(clf.coef_ / coef_se(clf, X, y, alpha)[1:])
+	
+	
     return np.append(a, b)
 
 

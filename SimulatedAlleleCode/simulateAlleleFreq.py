@@ -134,8 +134,8 @@ for iter in range(NUMRUN):
 		#
 		# % REMEMBER: 'n' here is INDIVIDUALS not SNPs
 		# % HapMap3 Data ~1000 individuals and ~1000000 SNPs
-		m = int(5e3) #number of SNPs
-		n = int(1e3) #number of individuals
+		m = int(1e3) #number of SNPs
+		n = int(1e2) #number of individuals
 		pvalue = 25.0/m
 		d = 3 #number of populations
 

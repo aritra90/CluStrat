@@ -31,6 +31,6 @@ if __name__ == '__main__':
             hue="Model",
             data=ht_pd)
 	sns.despine(offset=10, trim=True)
-	plt.legend(loc="upper right", fontsize = "x-small")
+	plt.legend(loc="upper left", fontsize = "x-small")
 	fig.get_figure().savefig(fname+"_spurious.png", bbox_inches='tight', dpi=600)
 
