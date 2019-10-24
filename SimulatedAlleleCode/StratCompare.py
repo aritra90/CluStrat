@@ -53,7 +53,7 @@ model_flags = ["BN","PSD","HGDP","TGP"]
 v_set = [[10, 0, 90],[20, 10, 70],[5, 5, 90]]
 nums = np.arange(1)
 #nums = [1,2,3,4,5]
-trait_flag = 1
+trait_flag = 0
 start = time.time()
 
 
@@ -612,8 +612,7 @@ for iter in range(NUMRUN):
         ####################           RUN GEMMA                    ###################
         ###############################################################################
         st5 = time.time()
-        subprocess.call(['plink', '--bfile', file_prefix, '--recode', '12', \
-            '--output-missing-genotype', '0', '--transpose','--out', file_prefix])
+        subprocess.call(['/depot/pdrineas/data/gwas_software/plink2/plink', '--bfile', file_prefix, '--recode', '12', '--output-missing-genotype', '0', '--transpose','--out', file_prefix])
         TFAM_PATH = file_prefix + '.tfam'
         TMP_TFAM_PATH = file_prefix + '_tmp.tfam'
         f2 = open(TMP_TFAM_PATH, "w")
@@ -622,8 +621,7 @@ for iter in range(NUMRUN):
         subprocess.call([PATH_TO_EMMAX_KIN, '-v', '-d', '10', file_prefix])
         KIN_PATH = str(file_prefix)+'.BN.kinf'
         EMMAXOUT_PATH = 'output/'+str(os.path.basename(file_prefix))+'_'+str(prop)+'_EMMAX'
-        subprocess.call([PATH_TO_EMMAX, '-v', '-d', '10', '-t', file_prefix, \
-            '-p', TMP_TFAM_PATH, '-k', KIN_PATH, '-o', EMMAXOUT_PATH])
+        subprocess.call([PATH_TO_EMMAX, '-v', '-d', '10', '-t', file_prefix, '-p', TMP_TFAM_PATH, '-k', KIN_PATH, '-o', EMMAXOUT_PATH])
         EMMAXOUT_PATH = EMMAXOUT_PATH + '.ps'
         
         p4 = Popen(['awk', '$NF < 0.0025{print NR}', EMMAXOUT_PATH], stdout=subprocess.PIPE)

@@ -9,7 +9,7 @@ from __future__ import unicode_literals
 
 import numpy as np
 import pandas as pd
-import scipy
+import scipy, time, math
 from sklearn import metrics
 from sklearn.decomposition import PCA
 
@@ -149,30 +149,27 @@ def coef_se(clf, X, y, alpha):
     X1 = np.hstack((np.ones((n, 1)), np.matrix(X)))
     m = X1.shape[1]
 
-    #print((X1.T*X1).shape)
-    #print("alpha : " + str(alpha) + " and m is " + str(m))
-	
-    #se_coeff = np.sqrt(metrics.mean_squared_error(y, clf.predict(X))
-	#	* np.diagonal(np.linalg.inv((X1*X1.T + alpha*np.eye(n))**2)))
-	coeff = np.zeros(m)
-	for i in range(m):
-        b1 = np.linalg.inv(X1.dot(X1.T) + alpha*np.eye(n)).dot(X1[:,i])
-		coeff[i] = np.linalg.norm(b1)**2
-    
-    se_coeff = np.sqrt(mean_squared_error(y,clf.predict(X))*coeff)
-    # se_matrix = scipy.linalg.sqrtm(
-        # metrics.mean_squared_error(y, clf.predict(X)) *
-        # np.linalg.pinv(X1.T * X1)
-    # )
-	
-    #print("array of s.e of beta")
-    #print(se_coeff)
-    #print(np.diagonal(se_matrix))
+    ########## SKETCH X
+    time0 = time.time()
+    # O(n) sketch dimension
+    s = X1.shape[0]
+    S = np.random.normal(0.0, 1.0, (X1.shape[1],s))/math.sqrt(s)
+    C = np.matmul(X1,S)
+    print('sketch size: ', C.shape)
+    print('Sketching time: ', (time.time()-time0)/3600.0)
+    ###########################################################
+
+    coeff = np.zeros(m)
+    for i in range(m):
+        b1 = np.linalg.inv(C.dot(C.T) + alpha*np.eye(n)).dot(X1[:,i])
+        coeff[i] = np.linalg.norm(b1)**2
+    se_coeff = np.sqrt(metrics.mean_squared_error(y,clf.predict(X))*coeff)
+
     
     return se_coeff
 
 
-def coef_tval(clf, X, y, alpha, beta):
+def coef_tval(clf, X, y, alpha):
     """Calculate t-statistic for beta coefficients.
 
     Parameters
