@@ -170,7 +170,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
 
                   ############ Grabbing final pvals (this code just updates the new ones coming in)
                   if len(intidx) > 0:
-                      repeatidx = np.intersect1d(intidx,combset)
+                      repeatidx = np.intersect1d(intidx,combset).astype(int)
                       if len(repeatidx) > 0:
                           for elem in repeatidx:
                               finalpvals_pt1[elem] = np.min(finalpvals_pt1[elem],ridge_pval[elem])
@@ -185,7 +185,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
 
                   ############ Grabbing final pvals
                   if len(intidx) > 0:
-                      repeatidx = np.intersect1d(comb_intidx,combset)
+                      repeatidx = np.intersect1d(comb_intidx,combset).astype(int)
                       if len(repeatidx) > 0:
                           for elem in repeatidx:
                               finalpvals_pt1[elem] = np.min(finalpvals_pt1[elem],ridge_pval[elem])
