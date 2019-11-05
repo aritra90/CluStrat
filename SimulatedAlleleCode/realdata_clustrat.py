@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print("Loaded genotype matrix of dimension ", X.shape)
     print('Loading time (secs): ', (time.time()-load_time))
     print(' ')
-    
+
     #print(pheno.shape)
     # we need SNPs x inidvs here
     print('##################### Transposing data...')
@@ -55,33 +55,33 @@ if __name__ == '__main__':
     print(' ')
     # traits, status = traitSim.simulate(normX,S,v,m,n,d)
     Y = pheno
-    
-    #print(np.unique(Y, return_counts=True))
-    
-    if (plot_flag == 1):
-    	svd_time = time.time()
-    	temp = np.matmul(normX,normX.T)
-    	U, Sig, _ = svds(temp, k =10)
-    	print('SVD time (mins): ', (time.time()-svd_time)/60.0)
-    	print(' ')
-    	print(np.sqrt(Sig))
-    	# PCA PLOTS
-    	# grab indices for cases and controls
-    	idxcase = np.where(Y == 1)[0]
-    	idxcontr = np.where(Y == 0)[0]
 
-    	plt.style.use('seaborn-darkgrid')
-    	fig = plt.figure()
-    	ax = fig.add_subplot(111)
-    	scale = 200.0 * np.random.rand(750)
-    	print('# Cases: '+str(len(idxcase)))
-    	print('# Controls: '+str(len(idxcontr)))
-    	ax.scatter(U[idxcase, 0], U[idxcase, 1], marker='o', color='red', s=10, label='case')
-    	ax.scatter(U[idxcontr, 0], U[idxcontr, 1], marker='*', color='blue', s=10, label='control')
-    	ax.legend()
-    	ax.set_xlabel('PC 1')
-    	ax.set_ylabel('PC 2')
-    	plt.savefig('clustrat_top2PCs.png', bbox_inches='tight', dpi=600)
+    #print(np.unique(Y, return_counts=True))
+
+    if (plot_flag == 1):
+        svd_time = time.time()
+        temp = np.matmul(normX,normX.T)
+        U, Sig, _ = svds(temp, k =10)
+        print('SVD time (mins): ', (time.time()-svd_time)/60.0)
+        print(' ')
+        print(np.sqrt(Sig))
+        # PCA PLOTS
+        # grab indices for cases and controls
+        idxcase = np.where(Y == 1)[0]
+        idxcontr = np.where(Y == 0)[0]
+
+        plt.style.use('seaborn-darkgrid')
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        scale = 200.0 * np.random.rand(750)
+        print('# Cases: '+str(len(idxcase)))
+        print('# Controls: '+str(len(idxcontr)))
+        ax.scatter(U[idxcase, 0], U[idxcase, 1], marker='o', color='red', s=10, label='case')
+        ax.scatter(U[idxcontr, 0], U[idxcontr, 1], marker='*', color='blue', s=10, label='control')
+        ax.legend()
+        ax.set_xlabel('PC 1')
+        ax.set_ylabel('PC 2')
+        plt.savefig('clustrat_top2PCs.png', bbox_inches='tight', dpi=600)
 
 
     print('##################### Getting distance matrix...')
@@ -92,14 +92,23 @@ if __name__ == '__main__':
     print('Calculating distance matrix time (mins): ', (time.time()-dist_time)/60.0)
     print(' ')
     print(D)
-    dele = [8, 12]
+    # dele = [3, 5]
+    dele = [12]
     d = 2
     # normR = normX.T
 
     print('##################### Running CluStrat...')
     clu_time = time.time()
-    SP, CS, clustcount = CluStrat.cluster(X, D, d, Y, pvalue, dele, sketch_flag)
+    SP, CS, clustcount, pvals, sigidx = CluStrat.cluster(X, D, d, Y, pvalue, dele, sketch_flag)
     print('CluStrat time (mins): ', (time.time()-clu_time)/60.0)
+
+    SNPids = []
+    with open(file_handle+'.bim', 'r') as f:
+        for line in f:
+            SNPids.append(line.split()[0])
+
+    np.savetxt('CluStrat_sigSNPs.txt', np.stack((SNPids[sigidx.astype(int)], pvals[sigidx.astype(int)]), axis=-1))
+
     #print(' ')
     #print(sigsnp_indices)
     # np.savetxt('CluStrat_pvals.txt', pvals, delimiter =', ')

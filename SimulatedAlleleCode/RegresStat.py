@@ -152,19 +152,19 @@ def coef_se(clf, X, y, alpha, Sig, sketch_flag):
         An array of standard errors for the beta coefficients.
     """
     n = X.shape[0]
-   
-    #print("MSE is ") 
+
+    #print("MSE is ")
     #print(metrics.mean_squared_error(y, clf.predict(X)))
     #print("Solution Beta")
 
     X1 = np.hstack((np.ones((n, 1)), np.matrix(X)))
     m = X1.shape[1]
     #print(X1.shape)
- 
+
     if int(sketch_flag) == 1:
-    	########## SKETCH X
+        ########## SKETCH X
         time0 = time.time()
-    	# O(n) sketch dimension
+        # O(n) sketch dimension
         s = 2*X1.shape[0]
         #S = np.random.normal(0.0, 1.0, (X1.shape[1],s))/math.sqrt(s)
         #C = np.matmul(X1,S)
@@ -173,7 +173,7 @@ def coef_se(clf, X, y, alpha, Sig, sketch_flag):
         print('Sketching time (mins): ', (time.time()-time0)/60.0)
     else:
         C = X1
-  
+
     ###########################################################
     print(C.shape)
     coeff = np.zeros(m)
@@ -181,14 +181,14 @@ def coef_se(clf, X, y, alpha, Sig, sketch_flag):
     for i in range(m):
         b1 = ridgeinv.dot(X1[:,i])
         coeff[i] = np.linalg.norm(b1)**2
-    
+
     #effdof = sum([i/(i + alpha) for i in Sig])
     effdof = n - (1.25)*np.trace((X1.T).dot(ridgeinv.dot(X1))) + 0.5
     #print(effdof)
     est_mse = (metrics.mean_squared_error(y,clf.predict(X)))/effdof
-    print(est_mse) 
+    print(est_mse)
     se_coeff = np.sqrt(est_mse*coeff)
-    
+
     return se_coeff
 
 
@@ -211,13 +211,13 @@ def coef_tval(clf, X, y, alpha, Sig, sketch_flag):
     """
     #a = np.array(clf.intercept_ / coef_se(clf, X, y, alpha)[0])
     #b = np.array(clf.coef_ / coef_se(clf, X, y, alpha)[1:])
-    denom = coef_se(clf, X, y, alpha, Sig, sketch_flag) 
-    #print(denom) 
+    denom = coef_se(clf, X, y, alpha, Sig, sketch_flag)
+    #print(denom)
     a = np.array(clf.intercept_ / denom[0])
     b = np.array(clf.coef_ / denom[1:])
-    #print(a) 
-    #print(b) 	
- 	
+    #print(a)
+    #print(b)
+
     return np.append(a, b), denom
 
 
