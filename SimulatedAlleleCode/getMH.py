@@ -20,8 +20,8 @@ def MH(X):
         s[i] -= 2*ALS[i]
     #scale it
     s = (n-1)*s
-    d = (n-1)*(d - 1/n)
-    np.fill_diagonal(s,d)
+    #d = (n-1)*(d - 1/n)
+    #np.fill_diagonal(s,d)
 
 
     return s
