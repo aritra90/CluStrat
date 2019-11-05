@@ -15,6 +15,17 @@ from sklearn.decomposition import PCA
 
 import _utils
 
+def countSketch(matrixA, s):
+    m, n = matrixA.shape
+    matrixC = np.zeros([m, s])
+    hashedIndices = np.random.choice(s, n, replace=True)
+    randSigns = np.random.choice(2, n, replace=True) * 2 - 1 # a n-by-1{+1, -1} vector
+    matrixA = matrixA * randSigns.reshape(n,1) # flip the signs of 50% columns of A
+    for i in range(s):
+        idx = (hashedIndices == i)
+        matrixC[i,:] = np.sum(matrixA[:,idx], 1)
+    return matrixC
+
 
 def residuals(clf, X, y, r_type='standardized'):
     """Calculate residuals or standardized residuals.
@@ -123,7 +134,7 @@ def adj_r2_score(clf, X, y):
     return 1 - (1 - r_squared) * ((n - 1) / (n - p - 1))
 
 
-def coef_se(clf, X, y, alpha):
+def coef_se(clf, X, y, alpha, Sig, sketch_flag):
     """Calculate standard error for beta coefficients.
 
     Parameters
@@ -148,28 +159,40 @@ def coef_se(clf, X, y, alpha):
 
     X1 = np.hstack((np.ones((n, 1)), np.matrix(X)))
     m = X1.shape[1]
-
-    ########## SKETCH X
-    time0 = time.time()
-    # O(n) sketch dimension
-    s = X1.shape[0]
-    S = np.random.normal(0.0, 1.0, (X1.shape[1],s))/math.sqrt(s)
-    C = np.matmul(X1,S)
-    print('sketch size: ', C.shape)
-    print('Sketching time: ', (time.time()-time0)/3600.0)
+    #print(X1.shape)
+ 
+    if int(sketch_flag) == 1:
+    	########## SKETCH X
+        time0 = time.time()
+    	# O(n) sketch dimension
+        s = 2*X1.shape[0]
+        #S = np.random.normal(0.0, 1.0, (X1.shape[1],s))/math.sqrt(s)
+        #C = np.matmul(X1,S)
+        C = countSketch(X1,s)
+        print('sketch size: ', C.shape)
+        print('Sketching time (mins): ', (time.time()-time0)/60.0)
+    else:
+        C = X1
+  
     ###########################################################
-
+    print(C.shape)
     coeff = np.zeros(m)
+    ridgeinv = np.linalg.inv(C.dot(C.T) + alpha*np.eye(n))
     for i in range(m):
-        b1 = np.linalg.inv(C.dot(C.T) + alpha*np.eye(n)).dot(X1[:,i])
+        b1 = ridgeinv.dot(X1[:,i])
         coeff[i] = np.linalg.norm(b1)**2
-    se_coeff = np.sqrt(metrics.mean_squared_error(y,clf.predict(X))*coeff)
-
+    
+    #effdof = sum([i/(i + alpha) for i in Sig])
+    effdof = n - (1.25)*np.trace((X1.T).dot(ridgeinv.dot(X1))) + 0.5
+    #print(effdof)
+    est_mse = (metrics.mean_squared_error(y,clf.predict(X)))/effdof
+    print(est_mse) 
+    se_coeff = np.sqrt(est_mse*coeff)
     
     return se_coeff
 
 
-def coef_tval(clf, X, y, alpha):
+def coef_tval(clf, X, y, alpha, Sig, sketch_flag):
     """Calculate t-statistic for beta coefficients.
 
     Parameters
@@ -188,14 +211,17 @@ def coef_tval(clf, X, y, alpha):
     """
     #a = np.array(clf.intercept_ / coef_se(clf, X, y, alpha)[0])
     #b = np.array(clf.coef_ / coef_se(clf, X, y, alpha)[1:])
-    a = np.array(clf.intercept_ / coef_se(clf, X, y, alpha)[0])
-    b = np.array(clf.coef_ / coef_se(clf, X, y, alpha)[1:])
-	
-	
-    return np.append(a, b)
+    denom = coef_se(clf, X, y, alpha, Sig, sketch_flag) 
+    #print(denom) 
+    a = np.array(clf.intercept_ / denom[0])
+    b = np.array(clf.coef_ / denom[1:])
+    #print(a) 
+    #print(b) 	
+ 	
+    return np.append(a, b), denom
 
 
-def coef_pval(clf, X, y, alpha):
+def coef_pval(clf, X, y, alpha, Sig, sketch_flag):
     """Calculate p-values for beta coefficients.
 
     Parameters
@@ -213,11 +239,11 @@ def coef_pval(clf, X, y, alpha):
         An array of p-values.
     """
     n = X.shape[0]
-    t = coef_tval(clf, X, y, alpha)
-    #print("\n ---- t stat ----- \n")
-    #print(t)
-    p = 2 * (1 - scipy.stats.t.cdf(abs(t), n - 1))
-    return p
+    t = coef_tval(clf, X, y, alpha, Sig, sketch_flag)
+    p, SE = 2 * (1 - scipy.stats.t.cdf(abs(t), n-1))
+    #print(*p, sep='\t')
+    #print(np.nansum(p))
+    return p, SE
 
 
 def f_stat(clf, X, y):

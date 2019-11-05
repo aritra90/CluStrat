@@ -4,20 +4,19 @@ import sys, csv, os, math, subprocess, itertools, time, random
 
 # Transposing downstream will be an issue here
 def norm(X, flag):
-    R = X.T.astype(float)
+    R = X.astype(float)
+    fr = np.zeros(R.shape[1])
     # print(R)
-    if flag == 1:
-        for i in range(0, R.shape[1]):
+    #if flag == 1:
+    for i in range(0, R.shape[1]):
+        fr[i] = (1+sum(R[:,i]))/(2+2*R.shape[0])
+        if flag == 1:    
             R[:,i] = R[:,i] - np.mean(R[:,i])
-            fr = (1+sum(R[:,i]))/(2+2*R.shape[0])
-            R[:,i] = R[:,i]/math.sqrt(fr*(1-fr))
-    else:
-        for i in range(0, R.shape[1]):
+            R[:,i] = R[:,i]/math.sqrt(fr[i]*(1-fr[i]))
+        else:
             R[:,i] = R[:,i] - np.mean(R[:,i])
 
-    R = R.T
-
-    return R
+    return R, fr
 
 
 if __name__ == '__main__':

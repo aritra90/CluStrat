@@ -9,6 +9,9 @@
 ## technique which outperform all the other techniques in identifying 
 ## the maximum number of causal SNPs while allowing for some spurious 
 ## associations. 
+
+### Run: python or python3 StratCompare.py 1 
+### 1 or 0 for trait flags whether you want binary or continuous traits
 ########################################################################
 ## Authors: 
 ##            Aritra Bose, IBM Research, Yorktown Heights, NY 
@@ -47,10 +50,10 @@ PRE_PATH = subprocess.call(['pwd'])
 NUMRUN = 100
 # Create 5 simulated datasets for each model and set of proportions (60 total datasets)
 # model_flags = ["BN"]
-model_flags = ["BN","PSD","HGDP","TGP"]
+model_flags = ["BN","PSD1","PSD01","PSD5","TGP"]
 # % proportions of genetic, environmental and noise contributions
 # % respectively for simulated traits (one of the 3 configs from paper)
-v_set = [[10, 0, 90],[20, 10, 70],[5, 5, 90]]
+v_set = [[5,5,90],[10, 0, 90],[20, 10, 70]]
 nums = np.arange(1)
 #nums = [1,2,3,4,5]
 trait_flag = 0
@@ -64,10 +67,10 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
     #create fake sample IDs
     # sampleIDs = [unicode(model_flag)+u"000"+unicode(s) for s in xrange(1,X.shape[1]+1)]
     #create fake rsIDs
-    rsIDs = ["rs000"+str(s) for s in range(1,X.shape[0]+1)]
+    rsIDs = ["rs000"+str(s) for s in range(1,X.shape[1]+1)]
     #create fake positions increasing randomly between 200 and 20k centimorgans
-    snpPositions = [float(s) for s in range(70000,70000+X.shape[0])]
-    for k in range(1,X.shape[0]):
+    snpPositions = [float(s) for s in range(70000,70000+X.shape[1])]
+    for k in range(1,X.shape[1]):
         snpPositions[k] = snpPositions[k-1] + random.randint(200,1000)
 
     # print(snpPositions)
@@ -79,7 +82,7 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
     if continuous_trait is None:
         list_of_Samples = []
         # Create samples
-        for i in range(X.shape[1]):
+        for i in range(X.shape[0]):
             # print sampleIDs[i]
             num = i+1
             fid = '%d'%num
@@ -94,7 +97,7 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
     else:
         list_of_Samples = []
         # Create samples
-        for i in range(X.shape[1]):
+        for i in range(X.shape[0]):
             # print sampleIDs[i]
             num = i+1
             fid = '%d'%num
@@ -109,7 +112,7 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
 
     list_of_Loci = []
     # Create loci
-    for j in range(0,X.shape[0]):
+    for j in range(0,X.shape[1]):
         rng = random.randint(0,1)
         if rng == 0:
             alleles = ['A','T']
@@ -118,7 +121,7 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
 
         # Choosing to encode rng = 0 as allele 'A'/'C' and 2 as allele 'T'/'G' (1 as heterozygous occurrences)
         # Get the allele frequencies
-        allele_counts = np.unique(X[j,:], return_counts = True)
+        allele_counts = np.unique(X[:,j], return_counts = True)
         # print(allele_counts)
         # if 0,1,2 all occur in the SNP...
         if allele_counts[0].shape[0] == 3:
@@ -155,10 +158,10 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
     plink_obj = WritablePlinkFile(file_prefix,list_of_Samples)
     # plink_obj = WritablePlinkFile(file_prefix,[Sample('0', '0', '0', '0', 0, 0)])
 
-    for i in range(0,X.shape[0]):
+    for i in range(0,X.shape[1]):
         # print(X[i,:])
         # print(X[i,:].shape)
-        plink_obj.write_row(list_of_Loci[i], X[i,:])
+        plink_obj.write_row(list_of_Loci[i], X[:,i])
     # plink_obj.loci = list_of_Loci
     print("Files created")
     # print("YAY")
@@ -172,9 +175,11 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
     return file_prefix
     # return plink_obj
 
-
+### check here 
+trait_flag = sys.argv[1]
 
 for iter in range(NUMRUN):
+    start_epoch = time.time()
     for model_flag, v, ctr in list(itertools.product(model_flags,v_set,nums)):
         print(model_flag)
         print(v)
@@ -248,7 +253,7 @@ for iter in range(NUMRUN):
                 S[pick-1,i] = 1;
                 # Leaving all other values at zero (indiv only assigned to one subpop)
 
-        elif model_flag == "PSD":
+        elif model_flag == "PSD1":
             # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             # %%%%%%% Load HapMap Info
             # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -309,68 +314,129 @@ for iter in range(NUMRUN):
                 S[:,i] = S[:,i]/np.sum(S[:,i])
                 I = np.argmax(S[:,i])
                 popidx[i] = I+1
-        elif model_flag == "HGDP":
-            # REMEMBER: 'n' here is INDIVIDUALS not SNPs
-            # Downsampling for simulation (computationally easier)
+        elif model_flag == "PSD01":
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            # %%%%%%% Load HapMap Info
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            HM_inf = pd.read_csv('CEUASWMEX_fst_frq.txt',sep=' ')
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            # %get allele freq and Fst for each SNP
+
+            # % allele freq: frequency (proportion) of that SNP in the data
+            # % Fst: % of contribution to the total genetic variation that each SNP has
+            frq = HM_inf['FRQ'].values #cell2mat(HM_inf(:,4));
+            Fst = HM_inf['FST'].values #cell2mat(HM_inf(:,3));
+
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            #
+            # % REMEMBER: 'n' here is INDIVIDUALS not SNPs
+            # % HapMap3 Data ~1000 individuals and ~1000000 SNPs
             m = int(1e4) #number of SNPs
-            n = int(305) #no. of individuals
-            pvalue = 0.0025;
-            flag = 0 #plot flag
-            d = int(10) #number of populations (see log of --fst result)
+            n = int(1e3) #number of individuals
+            pvalue = 250.0/m
+            d = 3 #number of populations
 
-            # allele freq of population: allele freq of each SNP described by that
-            # population
-            G = np.zeros((m,d)) #allele freq for each population
+            # % each row of Gamma will be populated with 3 i.i.d. draws from BN model
+            # % thanks to the nature of the HapMap data (sampled from 3 populations)
+            #
+            # % allele freq of population: allele freq of each SNP described by that
+            # % population
+            G = np.zeros((m,d)); #allele freq for each population
 
-            # columns of S will be populated with indicator vectors s.t. each
-            # individual assigned to one of the 51 subpopulations i.e. admixture
-            S = np.zeros((d,n)) #individual population admixture
+            # % columns of S will be populated with indicator vectors s.t. each
+            # % individual assigned to one of the 3 subpopulations i.e. admixture
+            S = np.zeros((d,n)); #individual population admixture
 
-            # random seeding here...
+            # %X = zeros(m,n); %genotype matrix
+            # % random seeding here...
+
             random.seed(datetime.now())
 
-            #populate the allele freq matrix from BN with (p,F) from HapMap
-            # for each SNP...
+            # %populate the allele freq matrix from BN with (p,F) from HapMap
+            # % for each SNP...
             for i in range(0,m):
                 # each row will generate 'd' variates drawing from this distribution
-                G[i,:] = 0.9*np.random.uniform(0, 0.5, size=d)
+                G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
 
-            # set last column to 0.05 per Song et al. 2015
-            G[:,d-1] = 0.05;
+            # print('Mean of allele freq matrix: ', np.mean(G, axis=0))
 
-            HGDP_PCs = pd.read_csv('pruned_HGDP_topPops_singVecs.txt',sep=' ',header=None)
-            topPCs = HGDP_PCs.values
+            # %populate the population admixture matrix
+            # %this part is tailor made for 3 populations as described in
+            # %Song et al. Nat. Genet. (2015)
+            # % Treating the probabilities as ranges
+            # % 1: <60/210, 2: bet. 60/210 and 120/210, 3: >=120/210
 
-            for i in range(0,d):
-               S[i,:] = (topPCs[:,i]-np.min(topPCs[:,i]))/(np.max(topPCs[:,i])-np.min(topPCs[:,i]))
-            S[d-1,:] = 1
-
+            alpha = 0.01*np.ones((d,1))
             popidx = np.zeros((n,1));
+            for i in range(0,n):
+                for j in range(0,d):
+                    S[j,i] = np.random.gamma(alpha[j],1)
 
-            HGDP_subpops = pd.read_csv('subpops_pruned_HGDP.txt',sep=' ',header=None)
+                S[:,i] = S[:,i]/np.sum(S[:,i])
+                I = np.argmax(S[:,i])
+                popidx[i] = I+1
+        elif model_flag == "PSD5":
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            # %%%%%%% Load HapMap Info
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            HM_inf = pd.read_csv('CEUASWMEX_fst_frq.txt',sep=' ')
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            # %get allele freq and Fst for each SNP
 
-            for i in range(0,HGDP_subpops.values.shape[0]):
-                if HGDP_subpops.values[i] == "Biaka_Pygmies":
-                    popidx[i] = 1;
-                elif HGDP_subpops.values[i] == "French":
-                    popidx[i] = 2;
-                elif HGDP_subpops.values[i] == "Han":
-                    popidx[i] = 3;
-                elif HGDP_subpops.values[i] == "Japanese":
-                    popidx[i] = 4;
-                elif HGDP_subpops.values[i] == "Palestinian":
-                    popidx[i] = 5;
-                elif HGDP_subpops.values[i] == "Papuan":
-                    popidx[i] = 6;
-                elif HGDP_subpops.values[i] == "Pima":
-                    popidx[i] = 7;
-                elif HGDP_subpops.values[i] == "Russian":
-                    popidx[i] = 8;
-                elif HGDP_subpops.values[i] == "Sardinian":
-                    popidx[i] = 9;
-                else:
-                    # Sindhi
-                    popidx[i] = 10;
+            # % allele freq: frequency (proportion) of that SNP in the data
+            # % Fst: % of contribution to the total genetic variation that each SNP has
+            frq = HM_inf['FRQ'].values #cell2mat(HM_inf(:,4));
+            Fst = HM_inf['FST'].values #cell2mat(HM_inf(:,3));
+
+            # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            #
+            # % REMEMBER: 'n' here is INDIVIDUALS not SNPs
+            # % HapMap3 Data ~1000 individuals and ~1000000 SNPs
+            m = int(1e4) #number of SNPs
+            n = int(1e3) #number of individuals
+            pvalue = 250.0/m
+            d = 3 #number of populations
+
+            # % each row of Gamma will be populated with 3 i.i.d. draws from BN model
+            # % thanks to the nature of the HapMap data (sampled from 3 populations)
+            #
+            # % allele freq of population: allele freq of each SNP described by that
+            # % population
+            G = np.zeros((m,d)); #allele freq for each population
+
+            # % columns of S will be populated with indicator vectors s.t. each
+            # % individual assigned to one of the 3 subpopulations i.e. admixture
+            S = np.zeros((d,n)); #individual population admixture
+
+            # %X = zeros(m,n); %genotype matrix
+            # % random seeding here...
+
+            random.seed(datetime.now())
+
+            # %populate the allele freq matrix from BN with (p,F) from HapMap
+            # % for each SNP...
+            for i in range(0,m):
+                # each row will generate 'd' variates drawing from this distribution
+                G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
+
+            # print('Mean of allele freq matrix: ', np.mean(G, axis=0))
+
+            # %populate the population admixture matrix
+            # %this part is tailor made for 3 populations as described in
+            # %Song et al. Nat. Genet. (2015)
+            # % Treating the probabilities as ranges
+            # % 1: <60/210, 2: bet. 60/210 and 120/210, 3: >=120/210
+
+            alpha = 0.5*np.ones((d,1))
+            popidx = np.zeros((n,1));
+            for i in range(0,n):
+                for j in range(0,d):
+                    S[j,i] = np.random.gamma(alpha[j],1)
+
+                S[:,i] = S[:,i]/np.sum(S[:,i])
+                I = np.argmax(S[:,i])
+                popidx[i] = I+1
+		
         elif model_flag == "TGP":
             # REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # Downsampling for simulation (computationally easier)
@@ -453,6 +519,7 @@ for iter in range(NUMRUN):
         print(X)
         # will show num_snps x num_indivs
         print(X.shape)
+        X = X.T
         print(" ")
 
         # # % if A is a matrix, then sum(A,2) is a column vector containing the sum of each row.
@@ -466,15 +533,18 @@ for iter in range(NUMRUN):
         # # %the second arg is related to whether we just want to mean center X or
         # # %standardize by the 2*p*(1-p)
         # # % same as normalize(X,2)
-        normX = normalize.norm(X,0);
+        normX,_ = normalize.norm(X,0);
         print(normX)
         # print(normX.shape)
         # sys.exit(0)
 
         # % simulate the traits
         # % the strategy simulates non-genetic effects and random variation
-        traits, status = traitSim.simulate(normX,S,v,m,n,d)
-        Y = status
+        traits, status = traitSim.simulate(normX.T,S,v,m,n,d)
+        if trait_flag == 1:
+                Y = status
+        else:
+                Y = traits
         # print status
         # print traits
         # print type(traits)
@@ -489,7 +559,7 @@ for iter in range(NUMRUN):
         else:
             prop = 3
 
-        if trait_flag == 0:
+        if trait_flag == 1:
             model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)+'/binary'
             if not os.path.exists(model_directory):
                 os.makedirs(model_directory)
@@ -506,11 +576,11 @@ for iter in range(NUMRUN):
 
             file_prefix = convert2plink(X,status,model_flag, model_directory, continuous_trait=traits)
         ###############################################################################
-        ofSP = open(model_flag + "_" + str(prop) + "_SP_out.txt", "a+") 
-        ofCS = open(model_flag + "_" + str(prop) +  "_CS_out.txt", "a+")
-        ###############################################################################
-        ####################      RUN ARMITAGE TREND CHISQ          ###################
-        ###############################################################################
+        ofSP = open(model_flag + "_" + str(prop) + "_" + str(trait_flag) + "_SP_out.txt", "a+") 
+        ofCS = open(model_flag + "_" + str(prop) + "_" + str(trait_flag) +  "_CS_out.txt", "a+")
+        # ###############################################################################
+        # ####################      RUN ARMITAGE TREND CHISQ          ###################
+        # ###############################################################################
         st2 = time.time()
         # % Get p-values based on correlation between each individual and the status
         # % (for every SNP)
@@ -518,7 +588,7 @@ for iter in range(NUMRUN):
         # % the status
         pvstat = np.zeros((m,1))
         for i in range(0,m):
-            pvstat[i] = ArmitChisq.chisq(normX[i,:],Y.T,n)
+            pvstat[i] = ArmitChisq.chisq(normX[:,i],Y.T,n)
         # Find a value that exceeds (1-0.0025)% of the samples from chi-sq with 1
         # degree of freedom
         # Only going to observe values greater than 'chisqst' 0.0025% of the time
@@ -546,7 +616,7 @@ for iter in range(NUMRUN):
         ###############################################################################
         ##PCA step on indivs by indivs matrix
         st3 = time.time()
-        temp = np.matmul(normX.T,normX)
+        temp = np.matmul(normX,normX.T)
         U, Sig, _ = np.linalg.svd(temp);
         corrPC =  np.corrcoef(U[:,0],popidx.T);
         print('Correlation of top axis of variation with populations membership: ',
@@ -554,7 +624,7 @@ for iter in range(NUMRUN):
         print("\n ================= \n ")
         # project out the top 'K' PCs (in this case 10)
         K = 10;
-        adjR, adjstat = EigStrat.project(normX.T,U[:,0:K],Y);
+        adjR, adjstat = EigStrat.project(normX,U[:,0:K],Y);
         # Get p-values based on correlation between each individual and the status
         # (for every SNP) *now on the adjusted data
         adjpvstat = np.zeros((m,1))
@@ -649,16 +719,19 @@ for iter in range(NUMRUN):
         ###############################################################################
         
         # 1000 choose 2 pairs (calculating distance between each pair)
-        #D = pdist(normX.T)
+        #D = pdist(normX.T)	
         st6 = time.time() 
-        D = getMH.MH(normX.T)
+        D = getMH.MH(normX)
         print(D)
-        dele = [2,4]
-        normR = normX.T
+        sketch_flag = 0	
+        if model_flag == "TGP":
+            dele = [0]
+        else: 
+            dele = [3, 5]
         # hierarchical clustering of individuals
         # pdist(X) returns the Euclidean distance between pairs of observations in X.
         clustering_time = time.time()
-        CS, clustcount, SP = CluStrat.cluster(X.T, U, D, d, Y, pvalue, dele)
+        CS, clustcount, SP = CluStrat.cluster(X, D, d, Y, pvalue, dele, sketch_flag)
         CS = list(CS)
         SP = list(SP)
         end_of_clustering = time.time()
@@ -676,7 +749,9 @@ for iter in range(NUMRUN):
         print('Time to CluStrat : ', en6 - st6)
         ofSP.write("%d \t %d \t %d \t %d \t %d \n" %(SP1, SP2, SP3, SP4, SP5))
         ofCS.write("%d \t %d \t %d \t %d \t %d \n" %(CS1, CS2, CS3, CS4 ,CS5))
-
+        #ofSP.write("%d \n" %(SP5))
+        #ofCS.write("%d \n" %(CS5))
+        print("One epoch took (mins): ", (time.time() - start_epoch)/60.0)
 # Putting headers
 fline = "CHISQ\tEIGENSTRAT\tGEMMA\tEMMAX\tCluStrat\n"    
 oline = ofCS.readlines()
@@ -688,3 +763,4 @@ ofSP.close()
 
 end = time.time()
 print('Total time elapsed (in seconds): ', end - start)
+
