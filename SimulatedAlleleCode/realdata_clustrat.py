@@ -131,9 +131,6 @@ if __name__ == '__main__':
     data_frame['pvals'] = pd.Series(pvals, index=data_frame.index)
     data_frame.to_csv('CluStrat_sigSNPs.txt', index = False, sep = ' ', header=False)
 
-    np.savetxt("CluStrat_pvals_final.txt", pvals)
-    np.savetxt("CluStrat_idx_final.txt", sigidx)
-
     CS = list(CS)
     SP = list(SP)
 

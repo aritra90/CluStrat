@@ -236,6 +236,11 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
         combset = np.asarray(combset).astype(int)
         final_idx = np.asarray(combset[Rpvidx].astype(int))
 
+        final_idx = np.asarray(final_idx.astype(int))
+        pvals = finalpvals_pt1[final_idx]
+        np.savetxt("CluStrat_pvals_final_"+str(k)+".txt", pvals)
+        np.savetxt("CluStrat_idx_final_"+str(k)+".txt", final_idx)
+
     return  CS, clustcount, SP, finalpvals_pt1, final_idx#, Rpvals, Rpvidx
 
 #
