@@ -79,7 +79,7 @@ def ridge_pvals(X, Y, sketch_flag):
 
     pvals = getSE.coef_pval(X1, Y, ridgeinv, betahat, mse, Sig, sketch_flag)
     #SE = getSE.se(X1, Y, ridgeinv, mse, Sig, sketch_flag)
-    print(pvals)
+    print('pvals: ',pvals)
 
 
     return pvals
@@ -96,7 +96,6 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
     Z = scipy_cluster(D,'ward')
     for k in range(0,len(dele)):
         numclust = pops+dele[k]
-
 
         den2 = sch.dendrogram(Z, leaf_rotation=90.,orientation='left', leaf_font_size=2)
         #plt.title('Dendrogram for PSD model \{$\alpha=0.1$\}')
@@ -153,12 +152,15 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
 
             if ct == 0:
                 # old_nnzidx = nnzidx
-                # finalpvals_pt1 = ridge_pvals
-                finalpvals_pt1 = np.zeros(ridge_pval.shape)
-            # else:
-            #     print("Computing minimum pvalues...")
-            #     # problem here is the zeros...
-            #     finalpvals_pt1 = np.minimum(finalpvals_pt1, ridge_pvals)
+                finalpvals_pt1 = ridge_pval
+                # finalpvals_pt1 = np.zeros(ridge_pval.shape)
+            else:
+                print("Computing minimum pvalues from previous iteration...")
+                for i in range(finalpvals_pt1.shape[0]):
+                    if finalpvals_pt1[i] != 0 and ridge_pval[i] != 0:
+                        finalpvals_pt1[i] = min(finalpvals_pt1[i], ridge_pval[i])
+                    else:
+                        finalpvals_pt1[i] = max(finalpvals_pt1[i], ridge_pval[i])
 
             if sum(ridge_pval) != 0:
                 if len(oldidx) == 0:
@@ -168,13 +170,13 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
                   intidx = np.intersect1d(oldidx,pvidx)
                   combset = np.unique(np.append(oldidx,pvidx))
 
-                  ############ Grabbing final pvals (this code just updates the new ones coming in)
-                  if len(intidx) > 0:
-                      repeatidx = np.intersect1d(intidx,combset).astype(int)
-                      if len(repeatidx) > 0:
-                          for elem in repeatidx:
-                              finalpvals_pt1[elem] = min(finalpvals_pt1[elem],ridge_pval[elem])
-                  #########################
+                  # ############ Grabbing final pvals (this code just updates the new ones coming in)
+                  # if len(intidx) > 0:
+                  #     repeatidx = np.intersect1d(intidx,combset).astype(int)
+                  #     if len(repeatidx) > 0:
+                  #         for elem in repeatidx:
+                  #             finalpvals_pt1[elem] = min(finalpvals_pt1[elem],ridge_pval[elem])
+                  # #########################
 
                   ct = ct + 1
                 else:
@@ -183,13 +185,13 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
                   intidx = np.unique(np.append(intidx,comb_intidx))
                   combset = list(np.unique(np.append(combset,pvidx)))
 
-                  ############ Grabbing final pvals
-                  if len(intidx) > 0:
-                      repeatidx = np.intersect1d(comb_intidx,combset).astype(int)
-                      if len(repeatidx) > 0:
-                          for elem in repeatidx:
-                              finalpvals_pt1[elem] = min(finalpvals_pt1[elem],ridge_pval[elem])
-                  #########################
+                  # ############ Grabbing final pvals
+                  # if len(intidx) > 0:
+                  #     repeatidx = np.intersect1d(comb_intidx,combset).astype(int)
+                  #     if len(repeatidx) > 0:
+                  #         for elem in repeatidx:
+                  #             finalpvals_pt1[elem] = min(finalpvals_pt1[elem],ridge_pval[elem])
+                  # #########################
 
         print('final pvalues shape (pt1)...')
         print(finalpvals_pt1.shape)
@@ -219,18 +221,22 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
             SP[k] = 0
             CS[k] = 0
 
-        # finalpvals_pt2 = Rpvals
-        print('shape of ridge pvalues (pt2)...')
-        print(Rpvals.shape)
-        print('shape of significant SNPs...')
-        print(Rpvidx.shape)
-        np.savetxt("CluStrat_pvals_pt2_"+str(k)+".txt", Rpvals)
-        np.savetxt("CluStrat_idx_pt2_"+str(k)+".txt", Rpvidx)
+        # # finalpvals_pt2 = Rpvals
+        # print('shape of ridge pvalues (pt2)...')
+        # print(Rpvals.shape)
+        # print('shape of significant SNPs...')
+        # print(Rpvidx.shape)
+        # np.savetxt("CluStrat_pvals_pt2_"+str(k)+".txt", Rpvals)
+        # np.savetxt("CluStrat_idx_pt2_"+str(k)+".txt", Rpvidx)
 
         print("number of causal SNPs in CluStrat = " + str(CS[k]))
         print("Number of final associations " + str(SP[k]))
 
-    return  CS, clustcount, SP, Rpvals, Rpvidx
+        Rpvidx = np.asarray(Rpvidx.astype(int))
+        combset = np.asarray(combset).astype(int)
+        final_idx = np.asarray(combset[Rpvidx].astype(int))
+
+    return  CS, clustcount, SP, finalpvals_pt1, final_idx#, Rpvals, Rpvidx
 
 #
 

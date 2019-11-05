@@ -102,28 +102,38 @@ if __name__ == '__main__':
     SP, CS, clustcount, pvals, sigidx = CluStrat.cluster(X, D, d, Y, pvalue, dele, sketch_flag)
     print('CluStrat time (mins): ', (time.time()-clu_time)/60.0)
 
+    print('final pvals: ', pvals)
+    print('final idx: ', sigidx)
+    print(' ')
+
     SNPids = []
+    chromids = []
     with open(file_handle+'.bim', 'r') as f:
         for line in f:
-            SNPids.append(line.split()[1])
+            elems = line.split('\t')
+            print(elems)
+            chromids.append(elems[0])
+            SNPids.append(elems[1])
 
+    print(len(chromids))
+    print(len(SNPids))
+
+    chromids = np.asarray(chromids)
     SNPids = np.asarray(SNPids)
     sigidx = np.asarray(sigidx.astype(int))
-    # print(sigidx)
-    # print(SNPids[sigidx])
+
+    chroms = chromids[sigidx]
     SNPs = SNPids[sigidx]
-    # print(pvals[sigidx])
     pvals = pvals[sigidx]
 
-    data_frame = pd.DataFrame(SNPs)
+    data_frame = pd.DataFrame(chroms)
+    data_frame['SNPs'] = pd.Series(SNPs, index=data_frame.index)
     data_frame['pvals'] = pd.Series(pvals, index=data_frame.index)
     data_frame.to_csv('CluStrat_sigSNPs.txt', index = False, sep = ' ', header=False)
 
-    # np.savetxt('CluStrat_sigSNPs.txt', np.stack((SNPids[sigidx], pvals[sigidx]), axis=-1))
+    np.savetxt("CluStrat_pvals_final.txt", pvals)
+    np.savetxt("CluStrat_idx_final.txt", sigidx)
 
-    #print(' ')
-    #print(sigsnp_indices)
-    # np.savetxt('CluStrat_pvals.txt', pvals, delimiter =', ')
     CS = list(CS)
     SP = list(SP)
 

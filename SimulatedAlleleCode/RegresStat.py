@@ -175,7 +175,7 @@ def coef_se(clf, X, y, alpha, Sig, sketch_flag):
         C = X1
 
     ###########################################################
-    print(C.shape)
+    # print(C.shape)
     coeff = np.zeros(m)
     ridgeinv = np.linalg.inv(C.dot(C.T) + alpha*np.eye(n))
     for i in range(m):
@@ -186,7 +186,7 @@ def coef_se(clf, X, y, alpha, Sig, sketch_flag):
     effdof = n - (1.25)*np.trace((X1.T).dot(ridgeinv.dot(X1))) + 0.5
     #print(effdof)
     est_mse = (metrics.mean_squared_error(y,clf.predict(X)))/effdof
-    print(est_mse)
+    # print(est_mse)
     se_coeff = np.sqrt(est_mse*coeff)
 
     return se_coeff
@@ -241,6 +241,7 @@ def coef_pval(clf, X, y, alpha, Sig, sketch_flag):
     n = X.shape[0]
     t = coef_tval(clf, X, y, alpha, Sig, sketch_flag)
     p, SE = 2 * (1 - scipy.stats.t.cdf(abs(t), n-1))
+    print('p values: ', p)
     #print(*p, sep='\t')
     #print(np.nansum(p))
     return p, SE

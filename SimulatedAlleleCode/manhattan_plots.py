@@ -15,19 +15,19 @@ def manhattan_plot(data, prefix, group):
     ax = fig.add_subplot(111)
 
     plotted_data = (-1)*np.log10(data.iloc[:,-1])
-    
-    # Mark sigSNPs based on some criteria 
+
+    # Mark sigSNPs based on some criteria
     #color_arr = list(np.where(plotted_data>5,'b','r'))
     thresh = (-1)*math.log10(25.0/data.shape[0])
     sigSNPs_idx = np.where( plotted_data>thresh )
     nonsigSNPs_idx = np.where(plotted_data <= thresh)
-    
+
     #print(sigSNPs_idx)
     #print(group)
     #print(group[sigSNPs_idx])
 
     ax.scatter(sigSNPs_idx[0] , plotted_data[sigSNPs_idx[0]], marker='d', color='b', s=8)
-    # cmap = 'magma' is cool, 'plasma' aight too 
+    # cmap = 'magma' is cool, 'plasma' aight too
     ax.scatter(nonsigSNPs_idx[0] , plotted_data[nonsigSNPs_idx[0]], marker='o', c=group[nonsigSNPs_idx[0]], cmap='inferno', s=8)
 
     #ax.scatter(np.arange(0,data.shape[0]) , plotted_data, marker='o', c=group, s=8)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     #print(data.shape)
     #print(' ')
     #manhattan_plot(data, 'emmax', group)
-    
+
     #data = pd.read_csv('output/PKHCGSRRS_pruned_LMM.assoc.txt',delimiter='\t')
     #print(data.head())
     #print(data.shape)
@@ -71,9 +71,11 @@ if __name__ == '__main__':
     #print(' ')
     #manhattan_plot(data, 'eigstrat', group)
 
-    for i in range(0,38):
+    file_list = ["CluStrat_pvals_pt1_0.txt", "CluStrat_pvals_pt2_0.txt"]
+
+    for elem in file_list:
         # e.g. CluStrat_24_pvals.txt
-        data = pd.read_csv('CluStrat_'+str(i)+'_pvals.txt',header=None,delimiter=',')
+        data = pd.read_csv(elem,header=None,delimiter=',')
         data = data.astype(float)
         data = data.T
         data = data.replace(np.nan, 1.0)
@@ -81,7 +83,4 @@ if __name__ == '__main__':
         print(data.info())
         print(data.head())
         print(' ')
-        manhattan_plot(data, 'clustrat_'+str(i), group)
-
-
-
+        manhattan_plot(data, elem.split('.')[0]+'.png', group)
