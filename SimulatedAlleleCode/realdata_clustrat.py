@@ -105,9 +105,21 @@ if __name__ == '__main__':
     SNPids = []
     with open(file_handle+'.bim', 'r') as f:
         for line in f:
-            SNPids.append(line.split()[0])
+            SNPids.append(line.split()[1])
 
-    np.savetxt('CluStrat_sigSNPs.txt', np.stack((SNPids[sigidx.astype(int)], pvals[sigidx.astype(int)]), axis=-1))
+    SNPids = np.asarray(SNPids)
+    sigidx = np.asarray(sigidx.astype(int))
+    # print(sigidx)
+    # print(SNPids[sigidx])
+    SNPs = SNPids[sigidx]
+    # print(pvals[sigidx])
+    pvals = pvals[sigidx]
+
+    data_frame = pd.DataFrame(SNPs)
+    data_frame['pvals'] = pd.Series(pvals, index=data_frame.index)
+    data_frame.to_csv('CluStrat_sigSNPs.txt', index = False, sep = ' ', header=False)
+
+    # np.savetxt('CluStrat_sigSNPs.txt', np.stack((SNPids[sigidx], pvals[sigidx]), axis=-1))
 
     #print(' ')
     #print(sigsnp_indices)
