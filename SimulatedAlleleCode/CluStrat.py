@@ -185,6 +185,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag):
                   intidx = np.unique(np.append(intidx,comb_intidx))
                   combset = list(np.unique(np.append(combset,pvidx)))
 
+            print('(running) Number of significant SNPs: ',len(combset))
                   # ############ Grabbing final pvals
                   # if len(intidx) > 0:
                   #     repeatidx = np.intersect1d(comb_intidx,combset).astype(int)

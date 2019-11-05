@@ -45,7 +45,7 @@ if __name__ == '__main__':
     #print(' ')
     m = X.shape[0]
     n = X.shape[1]
-    pvalue = 1e-3
+    pvalue = 1e-7
 
     print('##################### Normalizing data...')
     norm_time = time.time()
@@ -129,6 +129,7 @@ if __name__ == '__main__':
     data_frame = pd.DataFrame(chroms)
     data_frame['SNPs'] = pd.Series(SNPs, index=data_frame.index)
     data_frame['pvals'] = pd.Series(pvals, index=data_frame.index)
+    data_frame = data_frame.sort_values(by='pvals')
     data_frame.to_csv('CluStrat_sigSNPs.txt', index = False, sep = ' ', header=False)
 
     CS = list(CS)

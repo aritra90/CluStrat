@@ -21,7 +21,7 @@ def manhattan_plot(data, prefix, group=None):
     print(data.shape)
     # pvalue = 1e-3
     # thresh = (-1)*math.log10(25.0/data.shape[0])
-    thresh = (-1)*math.log10(1e-3)
+    thresh = (-1)*math.log10(1e-7)
     print(thresh)
 
     sigSNPs_idx = np.where( plotted_data>thresh )
