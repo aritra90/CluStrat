@@ -40,6 +40,7 @@ python3 CluStrat_wrapper.py --help
 ## Authors 
 
 Aritra Bose 
+
 Myson Burch
 
 <!---
