@@ -2,11 +2,11 @@
 
 # CluStrat: 
 
-This software performs agglomerative hierarchical clustering using the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the SNPs. 
+This software performs agglomerative hierarchical clustering with the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the genetic markers. 
 
 ## Description
 
-An in-depth paragraph about your project and overview of use.
+Genome-wide association studies (GWAS) have been extensively used to estimate the signed effects of trait-associated alleles and compute polygenic risk scores. Recently, it has been made evident that more rigorous and sophisticated methods for standard population structure correction are needed . Here, we provide a correction technique for complex population structure while leveraging the linkage disequilibrium (LD) induced distances between individuals. We implement CluStrat, which performs agglomerative hierarchical clustering using the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the SNPs. Here, we provide a comprehensive guide to stratification and subsequent disorder trait prediction or estimation utilizing the underlying LD structure of the genotypes.
 
 ## Getting Started
 
@@ -39,9 +39,9 @@ python3 CluStrat_wrapper.py --help
 
 ## Authors 
 
-Aritra Bose 
+Aritra Bose (email@site.com)
 
-Myson Burch
+Myson Burch (email@site.com)
 
 <!---
 ## Version History
