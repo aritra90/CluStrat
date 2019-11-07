@@ -22,7 +22,8 @@ python3 -m pip install plinkio
 
 * Files can be installed from this repository.
 
-### Executing program
+## Executing program
+* The main file to run this software is CluStrat_wrapper.py. This code ...
 ```
 python3 CluStrat_wrapper.py --sim 1
 ```
@@ -32,9 +33,13 @@ python3 CluStrat_wrapper.py --dir example/test_data
 ```
 python3 CluStrat_wrapper.py --help
 ```
+* Another important file to run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various softwares need to be edited accordingly to your machines/servers.
+```
+python StratCompare.py 1
+```
 
 ## Output 
-* The output of the code are the chromosome number, SNP rsIDs and p-values from ridge regression. 
+* The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. 
 ```
 chrom SNPs p-values
 3 rs2875479 1.2204460492567813e-16
@@ -58,6 +63,7 @@ chrom SNPs p-values
 10  rs6696837                LRG_402
 ...
 ```
+* The output of StratCompare.py is ...
 
 ## Notes
 
