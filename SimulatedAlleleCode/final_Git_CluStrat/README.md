@@ -12,20 +12,22 @@ Genome-wide association studies (GWAS) have been extensively used to estimate th
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
+* This software was developed using Python 3 (Python 2 for simulating datasets). 
+* There are many imports for the software and you just need to make sure your pip package has the necessary packages installed. For example:
+```
+python3 -m pip install plinkio
+```
 
 ### Installing
 
-* How/where to download your program
-* Any modifications needed to be made to files/folders
+* Files can be installed from this repository.
 
 ### Executing program
-
-* How to run the program
-* Step-by-step bullets
 ```
-code blocks for commands
+python3 CluStrat_wrapper.py --sim 1
+```
+```
+python3 CluStrat_wrapper.py --dir test/test_data 
 ```
 
 ## Help
