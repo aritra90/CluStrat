@@ -84,7 +84,7 @@ def ridge_pvals(X, Y, sketch_flag):
 
 
 
-def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms):
+def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
 
     clustcount = np.zeros((len(dele),1))
     CS = np.zeros((len(dele),1))
@@ -207,13 +207,16 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms):
 
         ############################ Write Output ############################
         # Writing final output (SNP IDs, chromosome label and p-value)
-        chromids = np.asarray(ids_and_chroms[1])
-        SNPids = np.asarray(ids_and_chroms[0])
+        if ids_and_chroms is None:
+            pass
+        else:
+            chromids = np.asarray(ids_and_chroms[1])
+            SNPids = np.asarray(ids_and_chroms[0])
 
-        data_frame = pd.DataFrame(chromids[final_idx],columns=['chrom'])
-        data_frame['SNPs'] = pd.Series(SNPids[final_idx], index=data_frame.index)
-        data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
-        data_frame = data_frame.sort_values(by='p-values')
-        data_frame.to_csv('CluStrat_signficantSNPs_dele'+str(k)+'.txt', index = False, sep = ' ', header=True)
+            data_frame = pd.DataFrame(chromids[final_idx],columns=['chrom'])
+            data_frame['SNPs'] = pd.Series(SNPids[final_idx], index=data_frame.index)
+            data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
+            data_frame = data_frame.sort_values(by='p-values')
+            data_frame.to_csv('CluStrat_signficantSNPs_dele'+str(k)+'.txt', index = False, sep = ' ', header=True)
 
     return  CS, clustcount, SP#, finalpvals_pt1, final_idx
