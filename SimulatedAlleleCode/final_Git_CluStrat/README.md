@@ -37,6 +37,10 @@ python3 CluStrat_wrapper.py --help
 ```
 python StratCompare.py 1
 ```
+* The last file to run is geneAnnot.r. ...
+```
+Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
+```
 
 ## Output 
 * The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. 
