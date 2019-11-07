@@ -23,7 +23,7 @@ python3 -m pip install plinkio
 * Files can be installed from this repository.
 
 ## Executing program
-* The main file to run this software is CluStrat_wrapper.py. This code ...
+* The main file to run this software is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
 ```
 python3 CluStrat_wrapper.py --sim 1
 ```
@@ -33,11 +33,11 @@ python3 CluStrat_wrapper.py --dir example/test_data
 ```
 python3 CluStrat_wrapper.py --help
 ```
-* Another important file to run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various softwares need to be edited accordingly to your machines/servers.
+* Another important file that can be run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various software packages need to be edited accordingly to where they are on your machines.
 ```
 python StratCompare.py 1
 ```
-* The last file to run is geneAnnot.r. ...
+* The last file to run is geneAnnot.r. This Rscript can be run taking the ouput file of CluStrat.py and the number of desired top annotations as input. The code uses biomaRt to extract gene annotations for the significant SNPs found by CluStrat. 
 ```
 Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
 ```
@@ -54,7 +54,7 @@ chrom SNPs p-values
 * The output of StratCompare.py is ...
 ```
 ```
-* There is also an R script, geneAnnot.r, that can be run taking the above file and use biomaRt to extract gene annotations for the significant SNPs found by CluStrat. The output from this script is the following:
+* The output from running geneAnnot.r is the following:
 ```
     refsnp_id ensembl_gene_stable_id associated_gene
 1   rs6699993
