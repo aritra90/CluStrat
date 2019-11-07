@@ -731,7 +731,7 @@ for iter in range(NUMRUN):
         # hierarchical clustering of individuals
         # pdist(X) returns the Euclidean distance between pairs of observations in X.
         clustering_time = time.time()
-        CS, clustcount, SP = CluStrat.cluster(X, D, d, Y, pvalue, dele, sketch_flag)
+        CS, clustcount, SP = CluStrat.cluster(X, D, d, Y, pvalue, dele)
         CS = list(CS)
         SP = list(SP)
         end_of_clustering = time.time()
