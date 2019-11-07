@@ -51,7 +51,9 @@ chrom SNPs p-values
 5 rs1987654 3.9854337898655673e-13
 ...
 ```
-
+* The output of StratCompare.py is ...
+```
+```
 * There is also an R script, geneAnnot.r, that can be run taking the above file and use biomaRt to extract gene annotations for the significant SNPs found by CluStrat. The output from this script is the following:
 ```
     refsnp_id ensembl_gene_stable_id associated_gene
@@ -67,7 +69,6 @@ chrom SNPs p-values
 10  rs6696837                LRG_402
 ...
 ```
-* The output of StratCompare.py is ...
 
 ## Notes
 
