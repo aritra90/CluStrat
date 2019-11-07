@@ -22,7 +22,7 @@ python3 -m pip install plinkio
 
 * Files can be installed from this repository.
 
-## Executing program
+## Executing programs
 * The main file to run this software is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
 ```
 python3 CluStrat_wrapper.py --sim 1
