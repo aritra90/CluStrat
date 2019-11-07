@@ -16,6 +16,7 @@ Genome-wide association studies (GWAS) have been extensively used to estimate th
 * There are many imports for the software and you just need to make sure your pip package has the necessary packages installed. For example:
 ```
 python3 -m pip install plinkio
+python2 -m pip install plinkio
 ```
 
 ### Installing
@@ -27,17 +28,17 @@ python3 -m pip install plinkio
 python3 CluStrat_wrapper.py --sim 1
 ```
 ```
-python3 CluStrat_wrapper.py --dir test/test_data 
+python3 CluStrat_wrapper.py --dir example/test_data 
 ```
-
-## Help
-
-Any advise for common problems or issues.
 ```
 python3 CluStrat_wrapper.py --help
 ```
 
 ## Notes
+
+* The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
+
+https://github.com/mfranberg/libplinkio
 
 ## Authors 
 
