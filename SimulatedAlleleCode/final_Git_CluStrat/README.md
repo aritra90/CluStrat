@@ -16,7 +16,6 @@ Genome-wide association studies (GWAS) have been extensively used to estimate th
 * There are many imports for the software and you just need to make sure your pip package has the necessary packages installed. For example:
 ```
 python3 -m pip install plinkio
-python2 -m pip install plinkio
 ```
 
 ### Installing
@@ -34,11 +33,22 @@ python3 CluStrat_wrapper.py --dir example/test_data
 python3 CluStrat_wrapper.py --help
 ```
 
+## Output 
+* The output of the code are the SNP rsIDs, corresponding chromosome number and p-value. 
+'''
+2 rs2592762 2.220446049250313e-16
+4 rs11727143 2.220446049250313e-16
+1 rs10449246 2.220446049250313e-16
+...
+'''
+
 ## Notes
 
 * The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
 
-https://github.com/mfranberg/libplinkio
+Reference: https://github.com/mfranberg/libplinkio
+
+* Another note when running CluStrat is to adjust the clustering depth based on the dendogram to get an appropriate number of desired clusters. During the execution, the dendogram plot is saved so you can halt the execution to view the plot, adjust the depth accordingly and re-run the code.
 
 ## Authors 
 
