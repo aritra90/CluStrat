@@ -210,7 +210,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms):
         chromids = np.asarray(ids_and_chroms[1])
         SNPids = np.asarray(ids_and_chroms[0])
 
-        data_frame = pd.DataFrame(chromids[final_idx])
+        data_frame = pd.DataFrame(chromids[final_idx],columns=['chrom'])
         data_frame['SNPs'] = pd.Series(SNPids[final_idx], index=data_frame.index)
         data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
         data_frame = data_frame.sort_values(by='p-values')
