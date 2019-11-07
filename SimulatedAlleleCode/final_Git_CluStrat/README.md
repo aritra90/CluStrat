@@ -43,7 +43,7 @@ Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
 ```
 
 ## Output 
-* The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. 
+* The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. The format is the following: 
 ```
 chrom SNPs p-values
 3 rs2875479 1.2204460492567813e-16
@@ -51,10 +51,10 @@ chrom SNPs p-values
 5 rs1987654 3.9854337898655673e-13
 ...
 ```
-* The output of StratCompare.py is ...
+* The output of StratCompare.py is ... The format is the following:
 ```
 ```
-* The output from running geneAnnot.r is the following:
+* The output from running geneAnnot.r are the annotations from biomaRt. The format is the following:
 ```
     refsnp_id ensembl_gene_stable_id associated_gene
 1   rs6699993
