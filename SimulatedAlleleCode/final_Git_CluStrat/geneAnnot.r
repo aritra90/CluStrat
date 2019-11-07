@@ -1,4 +1,8 @@
+args <- commandArgs(trailingOnly=TRUE)
 require(biomaRt)
+
+CluStrat_file <- args[1]
+num_annots <- as.numeric(args[2])
 
 ensembl <- useMart("ENSEMBL_MART_SNP", dataset = "hsapiens_snp")
 
@@ -12,6 +16,6 @@ ensembl <- useMart("ENSEMBL_MART_SNP", dataset = "hsapiens_snp")
 
 # data <- scan("CluStrat_sigSNPs.txt", what="character", sep = "\n")
 
-data<- read.table("CluStrat_signficantSNPs_dele0.txt",header=FALSE,sep=" ")
+data<- read.table(CluStrat_file,header=FALSE,sep=" ")
 
-getBM(attributes=c("refsnp_id", "ensembl_gene_stable_id", "associated_gene"), filters="snp_filter", values=data[1:25,2], mart=ensembl, uniqueRows=TRUE)
+getBM(attributes=c("refsnp_id", "ensembl_gene_stable_id", "associated_gene"), filters="snp_filter", values=data[1:num_annots,2], mart=ensembl, uniqueRows=TRUE)
