@@ -34,13 +34,33 @@ python3 CluStrat_wrapper.py --help
 ```
 
 ## Output 
-* The output of the code are the SNP rsIDs, corresponding chromosome number and p-value. 
-'''
-2 rs2592762 2.220446049250313e-16
-4 rs11727143 2.220446049250313e-16
-1 rs10449246 2.220446049250313e-16
+* The output of the code are the chromosome number, SNP rsIDs and p-values from ridge regression. 
+```
+chrom SNPs p-values
+3 rs2875479 1.2204460492567813e-16
+6 rs3456713 4.220446565656313e-15
+5 rs1987654 3.9854337898655673e-13
 ...
-'''
+```
+
+* There is also an R script, geneAnnot.r, that can be run taking the above file and use biomaRt to extract gene annotations for the significant SNPs found by CluStrat. The output from this script is the following:
+```
+    refsnp_id ensembl_gene_stable_id associated_gene
+1   rs6699993
+2  rs12049279
+3   rs6689517
+4   rs6427623
+5  rs12096958
+6   rs2794867                        RPL13AP11,CNTN2
+7   rs6692892        ENSG00000143353
+8  rs10449246
+9   rs6696837        ENSG00000198626
+10  rs6696837                LRG_402
+11   rs779921        ENSG00000224184
+12  rs2592762
+13  rs1425005        ENSG00000228262
+...
+```
 
 ## Notes
 
