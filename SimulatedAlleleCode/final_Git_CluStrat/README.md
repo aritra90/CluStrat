@@ -69,7 +69,7 @@ chrom SNPs p-values
 
 * The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
 
-Reference: https://github.com/mfranberg/libplinkio
+  Reference: https://github.com/mfranberg/libplinkio
 
 * Another note when running CluStrat is to adjust the clustering depth based on the dendogram to get an appropriate number of desired clusters. During the execution, the dendogram plot is saved so you can halt the execution to view the plot, adjust the depth accordingly and re-run the code.
 
