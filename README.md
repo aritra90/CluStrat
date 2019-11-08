@@ -33,6 +33,7 @@ python3 CluStrat_wrapper.py --dir example/test_data
 ```
 python3 CluStrat_wrapper.py --help
 ```
+<!---
 * Another important file that can be run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various software packages need to be edited accordingly to where they are on your machines.
 ```
 python StratCompare.py 1
@@ -41,7 +42,7 @@ python StratCompare.py 1
 ```
 Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
 ```
-
+--->
 ## Output 
 * The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. The format is the following: 
 ```
@@ -50,6 +51,7 @@ chrom SNPs p-values
 6 rs3456713 4.220446565656313e-15
 5 rs1987654 3.9854337898655673e-13
 ...
+<!---
 ```
 * The output of StratCompare.py is ... The format is the following:
 ```
@@ -69,7 +71,7 @@ chrom SNPs p-values
 10  rs6696837                LRG_402
 ...
 ```
-
+-->
 ## Notes
 
 * The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
