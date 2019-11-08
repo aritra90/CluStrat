@@ -1,3 +1,25 @@
+#######################################################################
+## Wrapper for running CluStrat. Please refer to the Readme to see how 
+## to run CluStrat/ 
+## 
+## The code performs a structure informed clustering based stratification 
+## technique to detect causal SNPs 
+
+### Run: 
+### For simulated data
+### python or python3 CluStrat_wrapper.py --sim/-s 1 
+###				-model BN/PSD/TGP -m 100 -n 5000 -tf 1 or 0 -pf 1 or 0 -prop 
+### 
+### 1 or 0 for trait flags whether you want binary or continuous traits
+########################################################################
+## Authors: 
+##            Aritra Bose, IBM Research, Yorktown Heights, NY 
+##            Myson Burch, Purdue University, West Lafayette, IN
+## Contact: 
+##            a.bose@ibm.com; mcburch@purdue.edu 
+#######################################################################
+#########################       IMPORT      ###########################
+#######################################################################
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt

@@ -1,12 +1,19 @@
-<img src="icon.png" align="right" />
+<img src="src/purduecs.jpg" align="right" />
 
 # CluStrat: 
 
-This software performs agglomerative hierarchical clustering with the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the genetic markers. 
+This software performs agglomerative hierarchical clustering with the 
+Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the 
+population-level covariance (LD) for the genetic markers. 
 
 ## Description
 
-Genome-wide association studies (GWAS) have been extensively used to estimate the signed effects of trait-associated alleles and compute polygenic risk scores. Recently, it has been made evident that more rigorous and sophisticated methods for standard population structure correction are needed . Here, we provide a correction technique for complex population structure while leveraging the linkage disequilibrium (LD) induced distances between individuals. We implement CluStrat, which performs agglomerative hierarchical clustering using the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the SNPs. Here, we provide a comprehensive guide to stratification and subsequent disorder trait prediction or estimation utilizing the underlying LD structure of the genotypes.
+Genome-wide association studies (GWAS) have been extensively used to 
+estimate the signed effects of trait-associated alleles and compute 
+polygenic risk scores. Recently, it has been made evident that more 
+rigorous and sophisticated methods for standard population structure correction 
+are needed . Here, we provide a correction technique for complex population structure 
+while leveraging the linkage disequilibrium (LD) induced distances between individuals. We implement CluStrat, which performs agglomerative hierarchical clustering using the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the SNPs. Here, we provide a comprehensive guide to stratification and subsequent disorder trait prediction or estimation utilizing the underlying LD structure of the genotypes.
 
 ## Getting Started
 
@@ -33,7 +40,6 @@ python3 CluStrat_wrapper.py --dir example/test_data
 ```
 python3 CluStrat_wrapper.py --help
 ```
-<!---
 * Another important file that can be run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various software packages need to be edited accordingly to where they are on your machines.
 ```
 python StratCompare.py 1
@@ -42,7 +48,7 @@ python StratCompare.py 1
 ```
 Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
 ```
---->
+-->
 ## Output 
 * The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. The format is the following: 
 ```
@@ -51,7 +57,23 @@ chrom SNPs p-values
 6 rs3456713 4.220446565656313e-15
 5 rs1987654 3.9854337898655673e-13
 ...
+
+## Notes
+
+* The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
+
+  Reference: https://github.com/mfranberg/libplinkio
+
+* Another note when running CluStrat is to adjust the clustering depth based on the dendogram to get an appropriate number of desired clusters. During the execution, the dendogram plot is saved so you can halt the execution to view the plot, adjust the depth accordingly and re-run the code.
+
+## Authors 
+
+Aritra Bose (email@site.com)
+
+Myson Burch (email@site.com)
+
 <!---
+
 ```
 * The output of StratCompare.py is ... The format is the following:
 ```
@@ -71,22 +93,7 @@ chrom SNPs p-values
 10  rs6696837                LRG_402
 ...
 ```
--->
-## Notes
 
-* The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
-
-  Reference: https://github.com/mfranberg/libplinkio
-
-* Another note when running CluStrat is to adjust the clustering depth based on the dendogram to get an appropriate number of desired clusters. During the execution, the dendogram plot is saved so you can halt the execution to view the plot, adjust the depth accordingly and re-run the code.
-
-## Authors 
-
-Aritra Bose (email@site.com)
-
-Myson Burch (email@site.com)
-
-<!---
 ## Version History
 * 0.2
     * Various bug fixes and optimizations
