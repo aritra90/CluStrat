@@ -1,8 +1,8 @@
-<img src="src/purduecs.jpg" align="right" />
+
 
 # CluStrat: 
 
-This software performs agglomerative hierarchical clustering with the 
+This package performs agglomerative hierarchical clustering with the 
 Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the 
 population-level covariance (LD) for the genetic markers. 
 
@@ -19,7 +19,7 @@ while leveraging the linkage disequilibrium (LD) induced distances between indiv
 
 ### Dependencies
 
-* This software was developed using Python 3 (Python 2 for simulating datasets). 
+* This package was developed using Python 3 (Python 2 for simulating datasets). 
 * There are many imports for the software and you just need to make sure your pip package has the necessary packages installed. For example:
 ```
 python3 -m pip install plinkio
@@ -30,7 +30,7 @@ python3 -m pip install plinkio
 * Files can be installed from this repository.
 
 ## Executing programs
-* The main file to run this software is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
+* The main file to run this package is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
 ```
 python3 CluStrat_wrapper.py --sim 1
 ```
@@ -115,3 +115,5 @@ Inspiration, code snippets, etc.
 -->
 
 ## Acknowledgments
+*For simulator code:  
+Song M., Wei H., and John D.S. "Testing for genetic associations in arbitrarily structured populations." Nature genetics 47.5 (2015): 550.
