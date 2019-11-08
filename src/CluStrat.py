@@ -123,7 +123,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
             sti = status[ClustMem == i+1]
             pvalc = np.zeros(n)
             ####################################################################
-            # get wieghts of all SNPs using Ridge regression (output are SNP ids?)
+            # get weights of all SNPs using Ridge regression (output are SNP ids?)
             pvals = ridge_pvals(normRi,sti, sketch_flag)
             ridge_pval = np.array(pvals[1:])
             ridge_pval[isnan(ridge_pval)] = 0
@@ -217,6 +217,6 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
             data_frame['SNPs'] = pd.Series(SNPids[final_idx], index=data_frame.index)
             data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
             data_frame = data_frame.sort_values(by='p-values')
-            data_frame.to_csv('CluStrat_signficantSNPs_dele'+str(k)+'.txt', index = False, sep = ' ', header=True)
+            data_frame.to_csv('CluStrat_assoc_numclust'+str(k)+'.txt', index = False, sep = ' ', header=True)
 
     return  CS, clustcount, SP#, finalpvals_pt1, final_idx

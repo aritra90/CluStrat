@@ -1,99 +1,105 @@
---------------------------------------------------------------------------
-Background
---------------------------------------------------------------------------
+<img src="icon.png" align="right" />
 
-The goal of the project is to explore a variety of machine learning methods
-that can properly distinguish cases from controls in regards to a particular
-disease/disorder given genetic data.
+# CluStrat: 
 
-As we know, this was the main goal when GWAS studies were being developed.
-However, the novel finding of ancestry inference from these studies was
-found and explored instead.
+This software performs agglomerative hierarchical clustering with the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the genetic markers. 
 
-We want to find a sophisticated 'method X' that is robust amongst different datasets with
-the hope that the method would be able to work well within the same disease
-domain (e.g. neurological).
+## Description
 
-Within the first couple of axes from PCA lie the geographical information that
-is encoded in our genetics. This is why GWAS studies have focused on the ancestry.
-However, there are axes in the PCA result that infer disease but of course they are
-much more difficult to find and interpret.
+Genome-wide association studies (GWAS) have been extensively used to estimate the signed effects of trait-associated alleles and compute polygenic risk scores. Recently, it has been made evident that more rigorous and sophisticated methods for standard population structure correction are needed . Here, we provide a correction technique for complex population structure while leveraging the linkage disequilibrium (LD) induced distances between individuals. We implement CluStrat, which performs agglomerative hierarchical clustering using the Mahalanobis distance based Genetic Relationship Matrix (GRM) representing the population-level covariance (LD) for the SNPs. Here, we provide a comprehensive guide to stratification and subsequent disorder trait prediction or estimation utilizing the underlying LD structure of the genotypes.
 
---------------------------------------------------------------------------
-PreReqs
---------------------------------------------------------------------------
+## Getting Started
 
->> module load gcc bioinfo plink texlive
+### Dependencies
 
-The PLINK format files for the particular dataset that you are using are needed.
+* This software was developed using Python 3 (Python 2 for simulating datasets). 
+* There are many imports for the software and you just need to make sure your pip package has the necessary packages installed. For example:
+```
+python3 -m pip install plinkio
+```
 
---------------------------------------------------------------------------
-The Files
---------------------------------------------------------------------------
+### Installing
 
-**Running the file**
->> python DIMdetect2.py -tr $trainset -te $testset -pf $prefix -cl $type -cv $crossval -pval $value -knel $knelval
+* Files can be installed from this repository.
 
-**e.g.**
->> python DIMdetect2.py -tr Parkinsons_trainset -te Parkinsons_testset -pf PRK -cl Ridge -cv kfold -pval 100000 -knel 1
+## Executing programs
+* The main file to run this software is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
+```
+python3 CluStrat_wrapper.py --sim 1
+```
+```
+python3 CluStrat_wrapper.py --dir example/test_data 
+```
+```
+python3 CluStrat_wrapper.py --help
+```
+* Another important file that can be run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various software packages need to be edited accordingly to where they are on your machines.
+```
+python StratCompare.py 1
+```
+* The last file to run is geneAnnot.r. This Rscript can be run taking the ouput file of CluStrat.py and the number of desired top annotations as input. The code uses biomaRt to extract gene annotations for the significant SNPs found by CluStrat. 
+```
+Rscript geneAnnot.r CluStrat_signficantSNPs_dele0.txt 40
+```
 
-**Arguments**
+## Output 
+* The output of CluStrat_wrapper.py are the chromosome number, SNP rsIDs and p-values from ridge regression. The format is the following: 
+```
+chrom SNPs p-values
+3 rs2875479 1.2204460492567813e-16
+6 rs3456713 4.220446565656313e-15
+5 rs1987654 3.9854337898655673e-13
+...
+```
+* The output of StratCompare.py is ... The format is the following:
+```
+```
+* The output from running geneAnnot.r are the annotations from biomaRt. The format is the following:
+```
+    refsnp_id ensembl_gene_stable_id associated_gene
+1   rs6699993
+2  rs12049279
+3   rs6689517
+4   rs6427623
+5  rs12096958
+6   rs2794867                        RPL13AP11,CNTN2
+7   rs6692892        ENSG00000143353
+8  rs10449246
+9   rs6696837        ENSG00000198626
+10  rs6696837                LRG_402
+...
+```
 
-"-tr" flag is for the prefix of the PLINK format training data (possibly generated by using the bose_splitdata script).
-For example, if the training data has files "Parkinsons_trainset.bed", "Parkinsons_trainset.bim", "Parkinsons_trainset.fam",
-and "Parkinsons_trainset.log" then the value for "$trainset" would be "Parkinsons_trainset".
+## Notes
 
-"-te" flag is for the prefix of the PLINK format testing data (see description above).
+* The simulation code (data_simulate.py) is ran using Python 2. When running with Python 3, a segmentation fault occurs when trying to save the simulated data in PLINK format using the libplinkio library. We are currently working on making this fix as Python 2 will be deprecated soon. 
 
-"-pf" flag is for the prefix of the output tables generated at the end (up to you what it is); "PRK" for example.
+  Reference: https://github.com/mfranberg/libplinkio
 
-"-cl" flag is for the classifier type to use. The options are the following:
+* Another note when running CluStrat is to adjust the clustering depth based on the dendogram to get an appropriate number of desired clusters. During the execution, the dendogram plot is saved so you can halt the execution to view the plot, adjust the depth accordingly and re-run the code.
 
-Class Options = [LDA,QDA,PolyReg,Ridge,Lasso,Elastic,SVM,SVR,kSVM,RidgeSVM,RFESVM,RandomForest]
+## Authors 
 
-Multiple options can be placed in a list in bash if looping through many different classes (see example script).
+Aritra Bose (email@site.com)
 
-"-cv" flag is for the crossvalidation type. The current options are either "kfold" or "loocv".
+Myson Burch (email@site.com)
 
-"-pval" flag is the number of markers/SNPs that are in the dataset used for output generation (table generation).
+<!---
+## Version History
+* 0.2
+    * Various bug fixes and optimizations
+    * See [commit change]() or See [release history]()
+* 0.1
+    * Initial Release
+## License
+This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
+## Acknowledgments
+Inspiration, code snippets, etc.
+* [awesome-readme](https://github.com/matiassingers/awesome-readme)
+* [PurpleBooth](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2)
+* [dbader](https://github.com/dbader/readme-template)
+* [zenorocha](https://gist.github.com/zenorocha/4526327)
+* [fvcproductions](https://gist.github.com/fvcproductions/1bfc2d4aecb01a834b46)
+-->
 
-"-knel" flag is for the type of kernel. "0" for no kernel, "1" for weighted linear kernel and "2" for Mahalanobis kernel.
-More options may be added later on.
-
-**Other files**
-
-The files below are imported in "DIMdetect2.py" and help compartmentalize the functionality of the software.
-
-**parseplink.py**
-This file is called when loading in the data and converting the PLINK data into matrices the code can work with.
-
-**kernelize.py**
-This file is called when doing the weighted linear kernel. This file computes the weights and "kernelizes" the training and test data.
-
-**mahalanobis.py**
-This file is called when doing the Mahalanobis kernel. This file computes the Mahalanobis distance and "kernelizes" the training and test data.
-
-**crossvalidation.py**
-This file is called when doing the cross-validation and returns the best parameters for the corresponding classifier.
-
-**classificationGWAS.py**
-This file is called to do the classification.
-
-**outputgenerator.py**
-This file is called to compute the output (various tables for the the accuracies, f1 scores, parameters etc. will be generated for plots.)
-
-
-**Cleaning**
->> ./clean.sh
-
-This script will remove most of the output files generated by the scripts just to clear clutter.
-
-One can add any files to this list as they see fit.
-
---------------------------------------------------------------------------
-Design Decisions and Issues
---------------------------------------------------------------------------
-4/11/2019:
-Current errors (besides algorithm-specific errors documented in prior ReadMes), consist of ill-conditioned
-matrices in the kernels that are computed. This is a result of singular matrices and I have currently
-addressed it by adding Gaussian noise but that may be something that is changed in the future.
+## Acknowledgments
