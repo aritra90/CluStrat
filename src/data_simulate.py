@@ -21,9 +21,7 @@ import pdb
 
 def msg(name=None):
     return '''data_simulate.py
-         >> python data_simulate.py --model BN --prop 2 --pheno continuous
-         >> python data_simulate.py --model PSD --prop 3 --pheno binary
-         >> python data_simulate.py --model TGP --prop 1 --pheno binary
+         >> python data_simulate.py --model BN --prop 10,20,70 --pheno 1 --size 1000,10000
         '''
 
 def parse_arguments():
@@ -32,17 +30,20 @@ def parse_arguments():
     parser.add_argument("-m", "--model", dest='model', action='store', help="Indicate which model to use for simulation (--model PSD/BN/TGP).",
                         metavar="MODEL")
 
-    parser.add_argument("-p", "--prop", dest='proportion', action='store', help="Indicate which proportion to use for simulation (--prop 1/2/3).",
+    parser.add_argument("-p", "--prop", dest='prop', action='store', help="Indicate which proportion to use for simulation (--prop 1/2/3).",
                         metavar="PROP")
 
     parser.add_argument("-ph", "--pheno", dest='phenotype', action='store', help="Indicate binary or continuous phenotype type to use for simulation (--pheno 0/1).",
                         metavar="PHENO")
 
+    parser.add_argument("-sz", "--size", dest='size', action='store', help="Enter the desired simulation matrix dimensions (individuals by SNPs)",
+                        metavar="SIZE")
+
     args = parser.parse_args()
 
     return args
 
-def convert2plink(X, status, model_flag, model_directory, continuous_trait=None):
+def convert2plink(X, status, model_flag, plink_filenm, continuous_trait=None):
 
     #create fake sample IDs
     # sampleIDs = [unicode(model_flag)+u"000"+unicode(s) for s in xrange(1,X.shape[1]+1)]
@@ -125,13 +126,12 @@ def convert2plink(X, status, model_flag, model_directory, continuous_trait=None)
                 list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
             # sys.exit(0)
 
-    file_prefix = model_directory+'/simdata_'+model_flag+'_'+str(random.randint(0, 9999999))
-    print u'File prefix: '+file_prefix
+    print u'File prefix: '+plink_filenm
 
     # Create PLINK files corresponding to the data
     # pdb.set_trace()
     # Sample(fid, iid, iid, iid, sex, affection, phenotype = 0.0)
-    plink_obj = WritablePlinkFile(file_prefix,list_of_Samples)
+    plink_obj = WritablePlinkFile(plink_filenm,list_of_Samples)
     # plink_obj = WritablePlinkFile(file_prefix,[Sample('0', '0', '0', '0', 0, 0)])
 
 
@@ -164,16 +164,38 @@ if __name__ == '__main__':
         print("No model argument given. Setting model to 'BN'.\n")
         model_flags = [u"BN"]
 
-    if args.proportion:
-        if args.proportion == "1":
-            v_set = [[10, 0, 90]]
-        elif args.proportion == "2":
-            v_set = [[20, 10, 70]]
-        else:
-            v_set = [[5, 5, 90]]
+    if args.prop:
+        v = args.prop.split(',')
+        try:
+            v_set = [int(i) for i in v]
+
+            if len(v) != 3 or np.sum(v_set) != 100:
+                print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+                sys.exit(1)
+
+        except ValueError:
+            print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+            sys.exit(1)
     else:
-        print("No proportion argument given. Setting prop to '2'.\n")
-        v_set = [[20, 10, 70]]
+        print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+        sys.exit(1)
+
+    if args.size:
+        dims = args.size.split(',')
+        try:
+            sim_shape = [int(i) for i in dims]
+
+            if len(dims) != 2:
+                print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+                sys.exit(1)
+
+        except ValueError:
+            print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+            sys.exit(1)
+    else:
+        print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+        sys.exit(1)
+
 
     if args.phenotype:
         if args.phenotype == "0":
@@ -185,12 +207,15 @@ if __name__ == '__main__':
         trait_flag = [0]
 
     # Generates 5 simulations
-    nums = [1,2,3,4,5]
+    nums = [1]
 
-    for model_flag, v, ctr, trait_flag in list(itertools.product(model_flags,v_set,nums,trait_flag)):
+    for model_flag, v, ctr, trait_flag in list(itertools.product(model_flags,[v_set],nums,trait_flag)):
         print model_flag
         print v
         print ctr
+
+        n = int(sim_shape[0])
+        m = int(sim_shape[1])
 
 
         if model_flag == u"BN":
@@ -210,9 +235,8 @@ if __name__ == '__main__':
             #
             # % REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # % HapMap3 Data ~1000 individuals and ~1000000 SNPs
-            m = int(1e4) #number of SNPs
-            n = int(1e3) #number of individuals
-            pvalue = 0.0025
+            # m = int(1e4) #number of SNPs
+            # n = int(1e3) #number of individuals
             d = 3 #number of populations
 
             # % each row of Gamma will be populated with 3 i.i.d. draws from BN model
@@ -277,9 +301,8 @@ if __name__ == '__main__':
             #
             # % REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # % HapMap3 Data ~1000 individuals and ~1000000 SNPs
-            m = int(1e4) #number of SNPs
-            n = int(1e3) #number of individuals
-            pvalue = 250.0/m
+            # m = int(1e4) #number of SNPs
+            # n = int(1e3) #number of individuals
             d = 3 #number of populations
 
             # % each row of Gamma will be populated with 3 i.i.d. draws from BN model
@@ -324,9 +347,8 @@ if __name__ == '__main__':
         elif model_flag == u"HGDP":
             # REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # Downsampling for simulation (computationally easier)
-            m = int(1e4) #number of SNPs
-            n = int(305) #no. of individuals
-            pvalue = 0.0025;
+            # m = int(1e4) #number of SNPs
+            # n = int(305) #no. of individuals
             flag = 0 #plot flag
             d = int(10) #number of populations (see log of --fst result)
 
@@ -386,9 +408,8 @@ if __name__ == '__main__':
         elif model_flag == u"TGP":
             # REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # Downsampling for simulation (computationally easier)
-            m = int(1e4) #number of SNPs
-            n = int(1056) #no. of individuals
-            pvalue = 0.0025;
+            # m = int(1e4) #number of SNPs
+            # n = int(1056) #no. of individuals
             flag = 0 #plot flag
             d = int(10) #number of populations (see log of --fst result)
 
@@ -487,29 +508,17 @@ if __name__ == '__main__':
 
         ###############################################################################
         # Write data in cluster to plink formatted file
-        if v == [10, 0, 90]:
-            prop = 1
-        elif v == [20, 10, 70]:
-            prop = 2
-        else:
-            prop = 3
 
         print("Converting to PLINK format...")
         if trait_flag == 0:
-            model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)+'/binary'
-            if not os.path.exists(model_directory):
-                os.makedirs(model_directory)
+            plink_filenm = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.phenotype)
+            # plink_filenm = u" " #os.path.abspath(plink_filenm)
 
-            # model_directory = u" " #os.path.abspath(model_directory)
-
-            convert2plink(X,status,model_flag, model_directory)
+            convert2plink(X,status,model_flag, plink_filenm)
         else:
-            model_directory = 'sim_plinkfiles/'+model_flag+'/proportion'+str(prop)+'/continuous'
-            if not os.path.exists(model_directory):
-                os.makedirs(model_directory)
+            plink_filenm = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.phenotype)
+            # plink_filenm = u" " #os.path.abspath(plink_filenm)
 
-            # model_directory = u" " #os.path.abspath(model_directory)
-
-            convert2plink(X,status,model_flag, model_directory, continuous_trait=traits)
+            convert2plink(X,status,model_flag, plink_filenm, continuous_trait=traits)
 
         ###############################################################################
