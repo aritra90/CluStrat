@@ -60,11 +60,34 @@ if __name__ == '__main__':
     ########################### Parsing Input Args ###########################
     print('##################### Parsing in arguments...\n')
     args = parse_arguments()
+<<<<<<< HEAD
+=======
+
+    if args.pvalue:
+        try:
+            pvalue = float(args.pvalue)
+        except ValueError:
+            print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
+    else:
+        print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
+        sys.exit(1)
+
+    if args.numclust:
+        try:
+            dele = [int(args.numclust)]
+        except ValueError:
+            print("Usage: Number of clusters flag must be an integer")
+            sys.exit(1)
+    else:
+        print("Usage: Number of clusters flag must be an integer")
+        sys.exit(1)
+>>>>>>> parent of 77cf31e... fixed wrapper
 
     ######################### Loading/Simulating Data #########################
     if args.simulate == "1":
         print('##################### Simulating data...\n')
         # Simulating data from all scenarios using Python 2.7
+<<<<<<< HEAD
         # v = args.prop.split(',')
 		# if len(v) != 3 | sum(len) == 100:
            # print "Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance. \n"
@@ -90,6 +113,61 @@ if __name__ == '__main__':
            print('##################### Loading data...\n')
         # Grab a file from the simulated data directory
         file_handle = "sim_plinkfiles/BN/proportion2/continuous/"+str(random.choice(os.listdir("sim_plinkfiles/BN/proportion2/continuous/"))).split('.')[0]
+=======
+        if args.prop:
+            v = args.prop.split(',')
+            try:
+                v_set = [int(i) for i in v]
+
+                if len(v) != 3 or np.sum(v_set) != 100:
+                    print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+                    sys.exit(1)
+
+            except ValueError:
+                print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+                sys.exit(1)
+        else:
+            print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+            sys.exit(1)
+
+        if args.size:
+            dims = args.size.split(',')
+            try:
+                sim_shape = [int(i) for i in dims]
+
+                if len(dims) != 2:
+                    print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+                    sys.exit(1)
+
+            except ValueError:
+                print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+                sys.exit(1)
+        else:
+            print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+            sys.exit(1)
+
+        if args.trait_flag != "1" and args.trait_flag != "0":
+            print("Usage: -tf 0 (for continuous) or 1 (for binary)")
+            sys.exit(1)
+        elif args.model not in allmodels:
+            print("Usage: Model flag should either BN (Balding-Nichols) | PSD (Pritchard-Stephens-Donnelly) | TGP (1000 Genomes Project)")
+            sys.exit(1)
+        elif args.verbose != "0" and args.verbose != "1":
+            print("Usage: Verbose should either be 0 or 1")
+            sys.exit(1)
+        elif args.plot_flag != "0" and args.plot_flag != "1":
+            print("Usage: Plot flag can either be 0 or 1")
+            sys.exit(1)
+
+        str_cmd = "python data_simulate.py --model " + str(args.model) + " --prop " + str(args.prop) + " --pheno " + str(args.trait_flag) + " --size " + str(args.size)
+        # COMMAND = "python data_simulate.py --model BN --prop 20,10,70 --pheno continuous"
+        subprocess.call(str_cmd, shell=True)
+
+        if args.verbose == "1":
+           print('##################### Loading data...\n')
+        # Grab a file from the simulated data directory
+        file_handle = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.trait_flag)
+>>>>>>> parent of 77cf31e... fixed wrapper
         print('Given dataset: '+file_handle)
         load_time = time.time()
         X, pheno = read_handlers(file_handle)
@@ -167,7 +245,11 @@ if __name__ == '__main__':
     # print(D)
     # dele = [3, 5]
     # variable to control different numbers of clusters
+<<<<<<< HEAD
     dele = [10,12]
+=======
+    # dele = [10,12] # = [args.numclust]?
+>>>>>>> parent of 77cf31e... fixed wrapper
     d = 2
 
     ######################### Run CluStrat Algorithm #########################
