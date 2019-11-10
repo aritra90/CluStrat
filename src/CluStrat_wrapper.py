@@ -3,13 +3,13 @@ import parseplink as pp
 import numpy as np
 
 import os, datetime, random, sys, shutil, itertools, math, argparse, time, subprocess
-from scipy.sparse.linalg import svds
+
 import normalize, getMH, CluStrat
 allmodels = ['BN', 'PSD', 'TGP']
 def msg(name=None):
     return '''CluStrat_wrapper.py
-         >> python3 CluStrat_wrapper.py --sim 1 --prop 10,20,70 --trait 1 --model BN --ver 0 --plot 0 --pval 0.0001 --numclust 10 --size 1000,1000 
-         >> python3 CluStrat_wrapper.py --dir /testing/test_data --pval 0.0001 --numclust 10
+         >> python3 CluStrat_wrapper.py --sim 1
+         >> python3 CluStrat_wrapper.py --dir /testing/test_data
          *above the sample data is in the directory 'testing/' and the prefix to the PLINK format data is 'test_data'.
         '''
 
@@ -22,30 +22,27 @@ def parse_arguments():
 
     parser.add_argument("-d", "--dir", dest='realdata_directory', action='store', help="Put the path to the real dataset.",
                         metavar="DIR")
-
+     
     parser.add_argument("-p", "--pval", dest='pvalue', action='store', help="Enter the desired p-value threshold",
-                        metavar="PV")
+	                    metavar="PV")
 
     parser.add_argument("-pr", "--prop", dest='prop', action='store', help="Enter comma separated proportion of variation",
-                        metavar="PROP")
-
+	                    metavar="PROP")
+						
     parser.add_argument("-tf", "--trait", dest='trait_flag', action='store', help="Enter the trait flag -- 1 for binary, 0 for continuous",
-                        metavar="TR")
-
+	                    metavar="TR")		
+						
     parser.add_argument("-m", "--model", dest='model', action='store', help="Enter the desired simulation model",
-                        metavar="MODEL")
-
-    parser.add_argument("-sz", "--size", dest='size', action='store', help="Enter the desired simulation matrix dimensions (individuals by SNPs)",
-                        metavar="SIZE")
-
+	                    metavar="MODEL")
+						
     parser.add_argument("-v", "--ver", dest='verbose', action='store', help="Set for verbose output with timing profile",
-                        metavar="VER")
-
+	                    metavar="VER")	
+						
     parser.add_argument("-pf", "--plot", dest='plot_flag', action='store', help="flag for plotting",
-                        metavar="PFLAG")
+	                    metavar="PFLAG")	
 
     parser.add_argument("-nc", "--numclust", dest='numclust', action='store', help="Enter comma separated number of clusters to train with",
-                        metavar="PV")
+	                    metavar="PV")						
     args = parser.parse_args()
 
     return args
@@ -64,82 +61,35 @@ if __name__ == '__main__':
     print('##################### Parsing in arguments...\n')
     args = parse_arguments()
 
-    if args.pvalue:
-        try:
-            pvalue = float(args.pvalue)
-        except ValueError:
-            print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
-    else:
-        print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
-        sys.exit(1)
-
-    if args.numclust:
-        try:
-            dele = [int(args.numclust)]
-        except ValueError:
-            print("Usage: Number of clusters flag must be an integer")
-            sys.exit(1)
-    else:
-        print("Usage: Number of clusters flag must be an integer")
-        sys.exit(1)
-
     ######################### Loading/Simulating Data #########################
     if args.simulate == "1":
         print('##################### Simulating data...\n')
         # Simulating data from all scenarios using Python 2.7
-        if args.prop:
-            v = args.prop.split(',')
-            try:
-                v_set = [int(i) for i in v]
-
-                if len(v) != 3 or np.sum(v_set) != 100:
-                    print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-                    sys.exit(1)
-
-            except ValueError:
-                print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-                sys.exit(1)
-        else:
-            print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-            sys.exit(1)
-
-        if args.size:
-            dims = args.size.split(',')
-            try:
-                sim_shape = [int(i) for i in dims]
-
-                if len(dims) != 2:
-                    print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-                    sys.exit(1)
-
-            except ValueError:
-                print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-                sys.exit(1)
-        else:
-            print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-            sys.exit(1)
-
-        if args.trait_flag != "1" and args.trait_flag != "0":
-            print("Usage: -tf 0 (for continuous) or 1 (for binary)")
-            sys.exit(1)
-        elif args.model not in allmodels:
-            print("Usage: Model flag should either BN (Balding-Nichols) | PSD (Pritchard-Stephens-Donnelly) | TGP (1000 Genomes Project)")
-            sys.exit(1)
-        elif args.verbose != "0" and args.verbose != "1":
-            print("Usage: Verbose should either be 0 or 1")
-            sys.exit(1)
-        elif args.plot_flag != "0" and args.plot_flag != "1":
-            print("Usage: Plot flag can either be 0 or 1")
-            sys.exit(1)
-
-        str_cmd = "python data_simulate.py --model " + str(args.model) + " --prop " + str(args.prop) + " --pheno " + str(args.trait_flag) + " --size " + str(args.size)
-        # COMMAND = "python data_simulate.py --model BN --prop 20,10,70 --pheno continuous"
-        subprocess.call(str_cmd, shell=True)
-
-        if args.verbose == "1":
+        # v = args.prop.split(',')
+		# if len(v) != 3 | sum(len) == 100:
+           # print "Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance. \n"
+           # sys.exit(1)
+        # elif args.trait_flag != 1 or args.trait_flag != 0:
+           # print "Usage: -tf 0 (for continuous) or 1 (for binary)"
+           # sys.exit(1)
+        # elif args.model not in allmodels:
+           # print "Usage: Model flag should either BN (Balding-Nichols) | PSD (Pritchard-Stephens-Donnelly) | TGP (1000 Genomes Project)"
+           # sys.exit(1)
+        # elif args.ver != 0 or args.ver != 1:
+           # print "Usage: Verbose should either be 0 or 1" 
+           # sys.exit(1)
+        # elif args.plot_flag != 0 or args.plot_flag != 1:
+           # print "Usage: Plot flag can either be 0 or 1"
+           # sys.exit(1)
+       
+		   
+        str_cmd = "python data_simulate.py --model " + str(args.model) + "--prop " + str(v) + "--pheno " + str(args.trait_flag)
+        COMMAND = "python data_simulate.py --model BN --prop 2 --pheno continuous"
+        #subprocess.call(COMMAND, shell=True)
+        if args.verbose == 1:
            print('##################### Loading data...\n')
         # Grab a file from the simulated data directory
-        file_handle = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.trait_flag)
+        file_handle = "sim_plinkfiles/BN/proportion2/continuous/"+str(random.choice(os.listdir("sim_plinkfiles/BN/proportion2/continuous/"))).split('.')[0]
         print('Given dataset: '+file_handle)
         load_time = time.time()
         X, pheno = read_handlers(file_handle)
@@ -167,6 +117,7 @@ if __name__ == '__main__':
     # Set the number of individuals, SNPs and pvalue
     m = X.shape[0]
     n = X.shape[1]
+    #pvalue = 1e-7
 
     ############################# Normalize Data #############################
     print('##################### Normalizing data...\n')
@@ -176,12 +127,9 @@ if __name__ == '__main__':
     print(' ')
     Y = pheno
 
-    # Plotting PCA (top 2 PCs) of the data
-    if args.plot_flag == 1:
-        plot_flag = 1
-    else:
-        plot_flag = 0
 
+    # Plotting PCA (top 2 PCs) of the data
+    plot_flag = 0
     if (plot_flag == 1):
         svd_time = time.time()
         temp = np.matmul(normX,normX.T)
@@ -219,7 +167,7 @@ if __name__ == '__main__':
     # print(D)
     # dele = [3, 5]
     # variable to control different numbers of clusters
-    # dele = [10,12] # = [args.numclust]?
+    dele = [10,12]
     d = 2
 
     ######################### Run CluStrat Algorithm #########################
