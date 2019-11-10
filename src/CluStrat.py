@@ -32,6 +32,7 @@ warnings.filterwarnings(action="ignore")
 import fastcluster, normalize, getSE
 import scipy.stats
 from sklearn.model_selection import KFold
+import RegresStat as RS
 from scipy.sparse.linalg import svds
 import scipy.cluster.hierarchy as sch
 from sklearn import linear_model, svm
@@ -105,7 +106,7 @@ def ridge_pvals(X, Y, sketch_flag):
 
 
 
-def cluster(R, D, status, pvalue, numclust, sketch_flag, ids_and_chroms=None):
+def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
 
     clustcount = np.zeros((len(dele),1))
     CS = np.zeros((len(dele),1))
@@ -113,6 +114,7 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, ids_and_chroms=None):
     allidx = []
     Z = scipy_cluster(D,'ward')
     for k in range(0,len(dele)):
+        numclust = pops+dele[k]
 
         den2 = sch.dendrogram(Z, leaf_rotation=90.,orientation='left', leaf_font_size=2)
         plt.xlabel('Distance')
