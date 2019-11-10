@@ -63,25 +63,32 @@ if __name__ == '__main__':
     ########################### Parsing Input Args ###########################
     print('##################### Parsing in arguments...\n')
     args = parse_arguments()
-
-    if args.pvalue:
-        try:
-            pvalue = float(args.pvalue)
-        except ValueError:
-            print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
+    if len(sys.argv) < 2: 
+       sys.exit("Sample Usage: python3 CluStrat_wrapper.py --pval 0.0001 --numclust 10 \
+	                --sim 1 --prop 10,20,70 --trait 1 --model BN --ver 0 --plot 0  \
+                     --size m (# of indivs), n (# of SNPs)")
+					 
     else:
-        print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
-        sys.exit(1)
+        if args.pvalue:
+            try:
+               pvalue = float(args.pvalue)
+               print("pvalue is ", str(pvalue))
+            except ValueError:
+               print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
+               sys.exit(1)
+        else:
+            print("Usage: Pvalue flag should be a float (0.001 or 1e-3)")
+            sys.exit(1)
 
-    if args.numclust:
-        try:
-            dele = [int(args.numclust)]
-        except ValueError:
+        if args.numclust:
+            try:
+               numclust = [int(args.numclust)]
+            except ValueError:
+               print("Usage: Number of clusters flag must be an integer")
+               sys.exit(1)
+        else:
             print("Usage: Number of clusters flag must be an integer")
             sys.exit(1)
-    else:
-        print("Usage: Number of clusters flag must be an integer")
-        sys.exit(1)
 
     ######################### Loading/Simulating Data #########################
     if args.simulate == "1":
@@ -132,7 +139,7 @@ if __name__ == '__main__':
             print("Usage: Plot flag can either be 0 or 1")
             sys.exit(1)
 
-        str_cmd = "python data_simulate.py --model " + str(args.model) + " --prop " + str(args.prop) + " --pheno " + str(args.trait_flag) + " --size " + str(args.size)
+        str_cmd = "python data_simulate.py --model " + str(args.model) + " --prop " + str(args.prop) + " --size " + str(args.size)
         # COMMAND = "python data_simulate.py --model BN --prop 20,10,70 --pheno continuous"
         subprocess.call(str_cmd, shell=True)
 
@@ -140,23 +147,26 @@ if __name__ == '__main__':
            print('##################### Loading data...\n')
         # Grab a file from the simulated data directory
         file_handle = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.trait_flag)
-        print('Given dataset: '+file_handle)
+        print('Reading : '+file_handle)
         load_time = time.time()
         X, pheno = read_handlers(file_handle)
-        print("Loaded genotype matrix of dimension ", X.shape)
-        print('Loading time (secs): ', (time.time()-load_time))
-        print(' ')
+        if args.verbose == "1":
+           print("Loaded genotype matrix of dimension ", X.shape)
+           print('Loading time (secs): ', (time.time()-load_time))
+           print(' ')
         # pass
 
     elif args.realdata_directory:
-        print('##################### Loading data...\n')
-        print('Given dataset: '+args.realdata_directory)
+        if args.verbose == "1":
+           print('##################### Loading data...\n')
+           print('Given dataset: '+args.realdata_directory)
         load_time = time.time()
         file_handle = str(args.realdata_directory)
         X, pheno = read_handlers(file_handle)
-        print("Loaded genotype matrix of dimension ", X.shape)
-        print('Loading time (secs): ', (time.time()-load_time))
-        print(' ')
+        if args.verbose == "1":
+           print("Loaded genotype matrix of dimension ", X.shape)
+           print('Loading time (secs): ', (time.time()-load_time))
+           print(' ')
         # pass
 
     else:
@@ -214,13 +224,14 @@ if __name__ == '__main__':
     # 1000 choose 2 pairs (calculating distance between each pair)
     #D = squareform(pdist(normX))
     D = getMH.MH(normX)
-    print('Calculating distance matrix time (mins): ', (time.time()-dist_time)/60.0)
-    print(' ')
+    if args.verbose == "1":
+       print('Calculating distance matrix time (mins): ', (time.time()-dist_time)/60.0)
+       print(' ')
     # print(D)
     # dele = [3, 5]
     # variable to control different numbers of clusters
     # dele = [10,12] # = [args.numclust]?
-    d = 2
+    #d = 2
 
     ######################### Run CluStrat Algorithm #########################
     print('##################### Running CluStrat...')
@@ -237,8 +248,9 @@ if __name__ == '__main__':
 
     clu_time = time.time()
     # SP, CS, clustcount, pvals, sigidx = CluStrat.cluster(X, D, d, Y, pvalue, dele, [SNPids, chromids])
-    SP, CS, clustcount = CluStrat.cluster(X, D, d, Y, pvalue, dele, 0, [SNPids, chromids])
-    print('CluStrat time (mins): ', (time.time()-clu_time)/60.0)
+    SP, CS, clustcount = CluStrat.cluster(X, D, Y, pvalue, numclust, 0, [SNPids, chromids])
+    if args.verbose == "1":
+	    print('CluStrat time (mins): ', (time.time()-clu_time)/60.0)
 
     CS = list(CS)
     SP = list(SP)
