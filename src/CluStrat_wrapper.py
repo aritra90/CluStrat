@@ -63,6 +63,7 @@ if __name__ == '__main__':
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
     if args.pvalue:
         try:
             pvalue = float(args.pvalue)
@@ -83,11 +84,16 @@ if __name__ == '__main__':
         sys.exit(1)
 >>>>>>> parent of 77cf31e... fixed wrapper
 
+=======
+>>>>>>> parent of 31c3b68... Update CluStrat_wrapper.py
     ######################### Loading/Simulating Data #########################
     if args.simulate == "1":
         print('##################### Simulating data...\n')
         # Simulating data from all scenarios using Python 2.7
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 31c3b68... Update CluStrat_wrapper.py
         # v = args.prop.split(',')
 		# if len(v) != 3 | sum(len) == 100:
            # print "Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance. \n"
@@ -110,6 +116,7 @@ if __name__ == '__main__':
         COMMAND = "python data_simulate.py --model BN --prop 2 --pheno continuous"
         #subprocess.call(COMMAND, shell=True)
         if args.verbose == 1:
+<<<<<<< HEAD
            print('##################### Loading data...\n')
         # Grab a file from the simulated data directory
         file_handle = "sim_plinkfiles/BN/proportion2/continuous/"+str(random.choice(os.listdir("sim_plinkfiles/BN/proportion2/continuous/"))).split('.')[0]
@@ -168,6 +175,11 @@ if __name__ == '__main__':
         # Grab a file from the simulated data directory
         file_handle = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.trait_flag)
 >>>>>>> parent of 77cf31e... fixed wrapper
+=======
+           print('##################### Loading data...\n')
+        # Grab a file from the simulated data directory
+        file_handle = "sim_plinkfiles/BN/proportion2/continuous/"+str(random.choice(os.listdir("sim_plinkfiles/BN/proportion2/continuous/"))).split('.')[0]
+>>>>>>> parent of 31c3b68... Update CluStrat_wrapper.py
         print('Given dataset: '+file_handle)
         load_time = time.time()
         X, pheno = read_handlers(file_handle)
@@ -246,10 +258,14 @@ if __name__ == '__main__':
     # dele = [3, 5]
     # variable to control different numbers of clusters
 <<<<<<< HEAD
+<<<<<<< HEAD
     dele = [10,12]
 =======
     # dele = [10,12] # = [args.numclust]?
 >>>>>>> parent of 77cf31e... fixed wrapper
+=======
+    dele = [10,12]
+>>>>>>> parent of 31c3b68... Update CluStrat_wrapper.py
     d = 2
 
     ######################### Run CluStrat Algorithm #########################
