@@ -1,22 +1,22 @@
 #######################################################################
-## Wrapper for running CluStrat. Please refer to the Readme to see how 
-## to run CluStrat/ 
-## 
-## The code performs a structure informed clustering based stratification 
-## technique to detect causal SNPs 
+## Wrapper for running CluStrat. Please refer to the Readme to see how
+## to run CluStrat/
+##
+## The code performs a structure informed clustering based stratification
+## technique to detect causal SNPs
 
-### Run: 
+### Run:
 ### For simulated data
-### python or python3 CluStrat_wrapper.py --sim/-s 1 
-###				-model BN/PSD/TGP -m 100 -n 5000 -tf 1 or 0 -pf 1 or 0 -prop 
-### 
+### python or python3 CluStrat_wrapper.py --sim/-s 1
+###				-model BN/PSD/TGP -m 100 -n 5000 -tf 1 or 0 -pf 1 or 0 -prop
+###
 ### 1 or 0 for trait flags whether you want binary or continuous traits
 ########################################################################
-## Authors: 
-##            Aritra Bose, IBM Research, Yorktown Heights, NY 
+## Authors:
+##            Aritra Bose, IBM Research, Yorktown Heights, NY
 ##            Myson Burch, Purdue University, West Lafayette, IN
-## Contact: 
-##            a.bose@ibm.com; mcburch@purdue.edu 
+## Contact:
+##            a.bose@ibm.com; mcburch@purdue.edu
 #######################################################################
 #########################       IMPORT      ###########################
 #######################################################################
@@ -32,7 +32,6 @@ warnings.filterwarnings(action="ignore")
 import fastcluster, normalize, getSE
 import scipy.stats
 from sklearn.model_selection import KFold
-import RegresStat as RS
 from scipy.sparse.linalg import svds
 import scipy.cluster.hierarchy as sch
 from sklearn import linear_model, svm
@@ -106,15 +105,14 @@ def ridge_pvals(X, Y, sketch_flag):
 
 
 
-def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
+def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms=None):
 
-    clustcount = np.zeros((len(dele),1))
-    CS = np.zeros((len(dele),1))
-    SP = np.zeros((len(dele),1))
+    clustcount = np.zeros((len(numclust),1))
+    CS = np.zeros((len(numclust),1))
+    SP = np.zeros((len(numclust),1))
     allidx = []
     Z = scipy_cluster(D,'ward')
-    for k in range(0,len(dele)):
-        numclust = pops+dele[k]
+    for k in range(0,len(numclust)):
 
         den2 = sch.dendrogram(Z, leaf_rotation=90.,orientation='left', leaf_font_size=2)
         plt.xlabel('Distance')
@@ -123,7 +121,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
         plt.clf()
         plt.cla()
         plt.close()
-        ClustMem = sch.fcluster(Z, numclust, depth=85000)
+        ClustMem = sch.fcluster(Z, numclust[k], depth=400)
 
         oldidx = []
         allpvals = []
@@ -132,7 +130,8 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
         sti = []
         combset = []
         m, n = R.shape
-        print('The number of clusters is : ', np.unique(ClustMem).shape[0]);
+        if verbose == "1":
+            print('The number of clusters is : ', np.unique(ClustMem).shape[0]);
         clustcount[k] = np.unique(ClustMem).shape[0]
         ct = 0
 
@@ -154,17 +153,19 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
                 nnzidx = np.nonzero(ridge_pval)[0]
 
                 pvidx = [i for i in nnzidx if ridge_pval[i] < (pvalue)]
-
-                print("number of significant SNPs : " + str(len(pvidx)))
+                if verbose == "1":
+                    print("number of significant SNPs : " + str(len(pvidx)))
             else:
-                print("\n All Ridge pvals are ZERO")
-                pvidx = np.zeros(normRi.shape[1],1)
+                if verbose == "1":
+                    print("\n All Ridge pvals are ZERO")
+                pvidx = np.zeros(normRi.shape[1])
             ####################################################################
 
             if ct == 0:
                 finalpvals_pt1 = ridge_pval
             else:
-                print("Computing minimum pvalues from previous iteration...")
+                if verbose == "1":
+                    print("Computing minimum pvalues from previous iteration...")
                 for i in range(finalpvals_pt1.shape[0]):
                     if finalpvals_pt1[i] != 0 and ridge_pval[i] != 0:
                         finalpvals_pt1[i] = min(finalpvals_pt1[i], ridge_pval[i])
@@ -193,7 +194,7 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
         # np.savetxt("CluStrat_idx_pt1_"+str(k)+".txt", combset)
 
         #Select the significant SNPs from the original data
-        Rpv = R[:,intidx.astype(int)]
+        Rpv = R[:,list(np.array(intidx).astype(int))]
         #Normalize the data
         normRpv,_ = normalize.norm(Rpv,0)
         Rpvals = ridge_pvals(normRpv, status, sketch_flag)
@@ -203,7 +204,8 @@ def cluster(R, D, pops, status, pvalue, dele, sketch_flag, ids_and_chroms=None):
             nnzidx = np.nonzero(Rpvals)[0]
             Rpvidx = [i for i in nnzidx if Rpvals[i] < pvalue]
         else:
-            print("All pvals are ZERO\n")
+            if verbose == "1":
+                print("All pvals are ZERO\n")
             #Store Junk
             Rpvidx = [-9]
         Rpvidx = np.array(Rpvidx)
