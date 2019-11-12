@@ -30,16 +30,38 @@ python3 -m pip install plinkio
 * Files can be installed from this repository.
 
 ## Executing programs
-* The main file to run this package is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The simulated data is fixed to one scenario by default but can be altered.  
+* The main file to run this package is CluStrat_wrapper.py. This code allows you to indicate whether you want to run CluStrat on simulated data or on real data (how to run below). The following commands are examples to run CluStrat. 
 ```
-python3 CluStrat_wrapper.py --sim 1
+python3 CluStrat_wrapper.py --sim 1 --prop 10,20,70 --trait 1 --model BN --ver 0 --plot 0 --pval 0.0001 --numclust 10 --size 1000,1000
 ```
 ```
-python3 CluStrat_wrapper.py --dir example/test_data 
+python3 CluStrat_wrapper.py --dir example/test_data --pval 0.0001 --numclust 10 
 ```
 ```
 python3 CluStrat_wrapper.py --help
 ```
+* Here is the description of the flags above:
+
+`--pval`: sets the p-value threshold for significant SNPs. This flag is required in both simulated and non-simulated runs.
+
+`--numclust`: sets the number of clusters for hierarchical clustering. This flag is required in both simulated and non-simulated runs.
+
+`--dir`: indicates use of a real dataset and sets the path to the PLINK formatted data to use. Use the prefix of the PLINK data e.g. `--dir /example/test_data` for files /example/test_data.bed, /example/test_data.bim and /example/test_data.fam.
+
+`--sim`: indicates simulating data. The next flags are needed for simulating data.
+
+`--prop`: sets the amount of variances for each effect (genetic, environmental and noise). The effects need are delimeted by commas and must sum to 100. 
+
+`--trait`: sets the simulated trait to be either continuous (1) or binary (0). 
+
+`--model`: sets the model to be used for simulation. The options are Balding-Nichols (BN) model, Pritchard-Stephens-Donnelly model (PSD) and 1000 Genomes Project model (TGP).
+
+`--ver`: sets flag for limited printing (1).
+
+`--plot`: indicates plotting PCA for the data. 
+
+`--size`: sets the dimensions for the simulation data (number of individuals, number of markers). 
+
 <!--
 * Another important file that can be run is StratCompare.py. This script can be run to compare Armitage Trend CHISQ, EigenStrat, Gemma and Emmax methods with CluStrat on simulated data. The paths to the various software packages need to be edited accordingly to where they are on your machines.
 ```
