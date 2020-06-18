@@ -6,6 +6,9 @@ import os, datetime, random, sys, shutil, itertools, math, argparse, time, subpr
 from scipy.sparse.linalg import svds
 import normalize, getMH, CluStrat
 allmodels = ['BN', 'PSD', 'TGP']
+
+PATH_SIMULATE='../src/data_simulate.py'
+
 def msg(name=None):
     return '''CluStrat_wrapper.py
          >> python3 CluStrat_wrapper.py --sim 1 --prop 10,20,70 --trait 1 --model BN --ver 0 --plot 0 --pval 0.0001 --numclust 10 --size 1000,1000
@@ -45,7 +48,10 @@ def parse_arguments():
                         metavar="PFLAG")
 
     parser.add_argument("-nc", "--numclust", dest='numclust', action='store', help="Enter comma separated number of clusters to train with",
-                        metavar="PV")
+                        metavar="NC")
+
+    parser.add_argument("-dp", "--depth", dest='depth', action='store', help="flag for depth", metavar="DFLAG")
+
     args = parser.parse_args()
 
     return args
@@ -66,7 +72,7 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
        sys.exit("Sample Usage: python3 CluStrat_wrapper.py --pval 0.0001 --numclust 10 \
 	                --sim 1 --prop 10,20,70 --trait 1 --model BN --ver 0 --plot 0  \
-                     --size m (# of indivs), n (# of SNPs)")
+                     --size m (# of indivs), n (# of SNPs) --depth 10000 [by dendrogram]")
 
     else:
         if args.pvalue:
@@ -81,15 +87,28 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if args.numclust:
+            clusts = args.numclust.split(',')
             try:
-               numclust = [int(args.numclust)]
+                numclust = [int(i) for i in clusts]
             except ValueError:
-               print("Usage: Number of clusters flag must be an integer")
+               print("Usage: -nc 10")
+               print("Usage: --numclust 5,10,20")
                sys.exit(1)
         else:
-            print("Usage: Number of clusters flag must be an integer")
+            print("Usage: Number of clusters flag must be an integer or list of integers e.g. 10,20,30")
             sys.exit(1)
-
+		
+        if args.depth:
+            try:
+                depth = int(args.depth)
+                print("depth is ", str(depth))
+            except ValueError:
+                print("Usage: Depth should be an integer (see Dendrogram for heights)")
+                sys.exit(1)
+        else:
+            print("Usage: Depth should be an integer (see Dendrogram for heights)")
+            sys.exit(1)
+			
     ######################### Loading/Simulating Data #########################
     if args.simulate == "1":
         print('##################### Simulating data...\n')
@@ -139,7 +158,7 @@ if __name__ == '__main__':
             print("Usage: Plot flag can either be 0 or 1")
             sys.exit(1)
 
-        str_cmd = "python data_simulate.py --model " + str(args.model) + " --prop " + str(args.prop) + \
+        str_cmd = "python "+PATH_SIMULATE+" --model " + str(args.model) + " --prop " + str(args.prop) + \
                     " --pheno " + str(args.trait_flag) + " --size " + str(args.size)
         # COMMAND = "python data_simulate.py --model BN --prop 20,10,70 --pheno continuous"
         subprocess.call(str_cmd, shell=True)
@@ -250,7 +269,7 @@ if __name__ == '__main__':
 
     clu_time = time.time()
     # SP, CS, clustcount, pvals, sigidx = CluStrat.cluster(X, D, d, Y, pvalue, dele, [SNPids, chromids])
-    SP, CS, clustcount = CluStrat.cluster(X, D, Y, pvalue, numclust, 0, args.verbose, [SNPids, chromids])
+    CS, clustcount, SP = CluStrat.cluster(X, D, Y, depth, pvalue, numclust, 0, args.verbose, [SNPids, chromids])
     if args.verbose == "1":
 	    print('CluStrat time (mins): ', (time.time()-clu_time)/60.0)
 

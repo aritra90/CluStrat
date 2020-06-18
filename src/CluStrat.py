@@ -44,6 +44,10 @@ from scipy.stats import t
 from sklearn.kernel_ridge import KernelRidge
 # import regressors as rgrs
 from regressors import stats
+from sklearn.feature_selection import chi2
+import statsmodels.api as sm
+from sklearn.linear_model import LinearRegression, LogisticRegression
+
 
 def intersect(*d):
     sets = iter(map(set, d))
@@ -82,30 +86,96 @@ def ridge_pvals(X, Y, sketch_flag):
     #regr.fit(X,Y)
     #y_pred = regr.predict(X)
     X1 = np.hstack((np.ones((m, 1)), np.matrix(X)))
-    ridgeinv = np.linalg.inv(X1.dot(X1.T) + medSig*np.eye(m))
+    ridgeinv = np.linalg.inv(X1.dot(X1.T) + medSig*np.eye(m)) # medSig*np.eye(m)
+    # print("Ridge inverse diagonal: ",ridgeinv.diagonal()[:10])
     betahat = ((X1.T).dot(ridgeinv)).dot(Y)
     y_pred = X1.dot(betahat.T)
+    # print("true y (mu centered): ", Y[Y.shape[0]-25:])
+    # print("y pred: ", y_pred[y_pred.shape[0]-25:])
     betahat = betahat.flatten().tolist()[0]
     mse = metrics.mean_squared_error(y_pred, Y)
+
     print("\n=============== \n")
     #print("\n Lambda is : "+str(regr.alpha_))
     #print("\n R2 score : "+str(regr.score(X,Y)))
-    print("\n MSE : " + str(mse))
-    print("\n Median Eigenvalue : " + str(medSig))
-    print("\n Max Eigenvalue : " + str(maxSig))
+    print("MSE : " + str(mse))
+    print("Median Eigenvalue : " + str(medSig))
+    print("Max Eigenvalue : " + str(maxSig))
     print("\n =============== \n")
 
-
     pvals = getSE.coef_pval(X1, Y, ridgeinv, betahat, mse, Sig, sketch_flag)
-    print('pvals: ',pvals)
-
+    print('CluStrat pvals: ',pvals)
+    print('mean: ',np.nanmean(pvals))
+    print('min: ',min(pvals))
+    print('max: ',max(pvals))
 
     return pvals
 
 
+def chi2_pvals(X,Y):
+    print('\n\n\n\n\n')
+    print("ASSOCIATION TEST OUTPUT:")
+    print('Dimension of X: ',X.shape)
+    
+    scores, pvals = chi2(X,Y)
+    print(pvals)
+    
+    return pvals
+    
+def linear_pvals(X, Y, sketch_flag, lmbda=0):
+####################################################################
+    #lambdas = np.logspace(-2.5,2.5,25)
+    print('\n\n\n\n\n')
+    print("LINEAR REGRESSION OUTPUT:")
+    Y = Y - np.mean(Y)
+    m, n = X.shape
+    print('Dimension of X: ',X.shape)
+
+    lm = LinearRegression()
+    #lm = LogisticRegression(random_state=0, penalty='l2')
+    lm.fit(X,Y)
+    params = np.asarray(lm.coef_)
+    print('Linear regression estimated coeffs: ', params)
+    predictions = lm.predict(X)
+    print('Original signal: ',Y)
+    print('Linear regression predictions: ',predictions)
+    # predictions = predictions + np.random.uniform(min(predictions),max(predictions),predictions.shape[0])/2
+    # print(predictions)
+    MSE = metrics.mean_squared_error(predictions, Y) 
+    #print('DEBUGGING')
+    #MSE = 10**16*MSE
+    print('Mean-squared error: ',MSE)
+    #print('DEBUGGING')
+    #sys.exit(0)
+    temp = np.linalg.pinv(np.dot(X.T,X)).diagonal()
+    print('Diagonal elements of pseudo inverse: ',temp)
+    var_b = MSE*(temp)
+    print('var_b: ', var_b)
+    sd_b = np.sqrt(var_b)
+    print('sd_b: ', var_b)
+    ts_b = params/ sd_b
+    print('ts_b: ', ts_b)
+    p_values =np.asarray([2*(1-t.cdf(np.abs(i),(m-1))) for i in ts_b])
+    print('Linear regression pvalues: ', p_values)
+    dbg_nnzidx = np.nonzero(p_values)[0]
+    print('pvalue mean (0s/nans excluded): ',np.nanmean(p_values[dbg_nnzidx]))
+    print('pvalue min (0s/nans excluded): ',np.nanmin(p_values[dbg_nnzidx]))
+    print('pvalue max (0s/nans excluded): ',np.nanmax(p_values[dbg_nnzidx]))
+    print('Length of pvalues: ', p_values.shape[0])
+    print('Number of zeros in pvalues: ', np.sum(p_values == 0))
+    print('Number of nans in pvalues: ', np.isnan(p_values).sum())
 
 
-def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms=None):
+    # print('No. of significant SNPs by LinearRegression: ',len([i for i in dbg_nnzidx if p_values[i] < 0.0001]))
+    # print('mean: ',np.nanmean(p_values[dbg_nnzidx]))
+    # print('min: ',np.nanmin(p_values[dbg_nnzidx]))
+    # print('max: ',np.nanmax(p_values[dbg_nnzidx]))
+
+    # print('\nend of DEBUGGING')
+
+    return p_values #pvals
+
+def cluster(R, D, status, depth, pvalue, numclust, sketch_flag, verbose, ids_and_chroms=None):
 
     clustcount = np.zeros((len(numclust),1))
     CS = np.zeros((len(numclust),1))
@@ -117,11 +187,12 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
         den2 = sch.dendrogram(Z, leaf_rotation=90.,orientation='left', leaf_font_size=2)
         plt.xlabel('Distance')
         plt.savefig('Z_dendogram_'+str(k)+'.png')
-
+        #sys.exit(0)
+	
         plt.clf()
         plt.cla()
         plt.close()
-        ClustMem = sch.fcluster(Z, numclust[k], depth=400)
+        ClustMem = sch.fcluster(Z, numclust[k], depth=depth)
 
         oldidx = []
         allpvals = []
@@ -151,10 +222,9 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
 
             if sum(ridge_pval) != 0:
                 nnzidx = np.nonzero(ridge_pval)[0]
-
                 pvidx = [i for i in nnzidx if ridge_pval[i] < (pvalue)]
-                if verbose == "1":
-                    print("number of significant SNPs : " + str(len(pvidx)))
+                # if verbose == "1":
+                #     print("number of significant SNPs : " + str(len(pvidx)))
             else:
                 if verbose == "1":
                     print("\n All Ridge pvals are ZERO")
@@ -186,7 +256,7 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
                   intidx = np.unique(np.append(intidx,comb_intidx))
                   combset = list(np.unique(np.append(combset,pvidx)))
 
-            print('(running) Number of significant SNPs: ',len(combset))
+            # print('(running) Number of significant SNPs: ',len(combset))
 
         # print('final pvalues shape (pt1)...')
         # print(finalpvals_pt1.shape)
@@ -197,9 +267,26 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
         Rpv = R[:,list(np.array(intidx).astype(int))]
         #Normalize the data
         normRpv,_ = normalize.norm(Rpv,0)
+        #normRpv = Rpv 
+# ################################################################################
+# ################################################################################
+#         print("DEBUGGING")
+#         regressor_OLS = sm.OLS(status,normRpv).fit()
+#         debug_pvals = np.asarray(regressor_OLS.pvalues.astype(float))
+#         print(debug_pvals)
+#         debug_pvals[isnan(debug_pvals)] = 0
+#         dbg_nnzidx = np.nonzero(debug_pvals)[0]
+#         dbg_pvidx = [i for i in dbg_nnzidx if debug_pvals[i] < pvalue]
+#         print(len(dbg_pvidx))
+#         np.savetxt("debugging_pvals.out", debug_pvals[dbg_pvidx])
+# ################################################################################
+# ################################################################################
+
+        #Rpvals = linear_pvals(normRpv, status, sketch_flag, 0)
         Rpvals = ridge_pvals(normRpv, status, sketch_flag)
         Rpvals = np.array(Rpvals[1:])
         Rpvals[isnan(Rpvals)] = 0
+        print('P-value threshold: ', pvalue)
         if sum(ridge_pval) != 0:
             nnzidx = np.nonzero(Rpvals)[0]
             Rpvidx = [i for i in nnzidx if Rpvals[i] < pvalue]
@@ -208,7 +295,7 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
                 print("All pvals are ZERO\n")
             #Store Junk
             Rpvidx = [-9]
-        Rpvidx = np.array(Rpvidx)
+        Rpvidx = np.array(Rpvidx).astype(int)
         if Rpvidx.all() != -9:
             sig3 = len(np.where(intidx[Rpvidx].astype(int) < 10)[0])
             SP[k] = abs(len(Rpvidx) - sig3)
@@ -217,7 +304,7 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
             SP[k] = 0
             CS[k] = 0
 
-        print("number of causal SNPs in CluStrat = " + str(CS[k]))
+        # print("Number of causal SNPs in CluStrat = " + str(CS[k]))
         print("Number of final associations " + str(SP[k]))
 
         # Grab and convert final significant SNP indices
@@ -239,7 +326,9 @@ def cluster(R, D, status, pvalue, numclust, sketch_flag, verbose, ids_and_chroms
 
             data_frame = pd.DataFrame(chromids[final_idx],columns=['chrom'])
             data_frame['SNPs'] = pd.Series(SNPids[final_idx], index=data_frame.index)
-            data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
+            # VERSION 3 of GITHUB CODE FIXING PVAL BUG
+            # data_frame['p-values'] = pd.Series(finalpvals_pt1[final_idx], index=data_frame.index)
+            data_frame['p-values'] = pd.Series(Rpvals[Rpvidx], index=data_frame.index)
             data_frame = data_frame.sort_values(by='p-values')
             data_frame.to_csv('CluStrat_assoc_numclust'+str(k)+'.txt', index = False, sep = ' ', header=True)
 
