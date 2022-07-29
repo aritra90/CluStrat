@@ -14,7 +14,7 @@ from datetime import datetime
 from sklearn.cluster import KMeans
 from scipy.stats.distributions import chi2
 from scipy.spatial.distance import pdist
-import normalize, traitSim #, ArmitChisq, EigStrat, getMH, CluStrat
+import normalize, traitSim, traitSim_risk #, ArmitChisq, EigStrat, getMH, CluStrat
 from plinkio.plinkfile import WritablePlinkFile, Sample, Locus
 
 import pdb
@@ -39,6 +39,8 @@ def parse_arguments():
     parser.add_argument("-sz", "--size", dest='size', action='store', help="Enter the desired simulation matrix dimensions (individuals by SNPs)",
                         metavar="SIZE")
 
+    parser.add_argument("-r", "--risk", dest='risk_flag', action='store', help="Set Risk flag if you want risk for one population to be greater than the others",
+                        metavar="RISK")
     args = parser.parse_args()
 
     return args
@@ -206,10 +208,19 @@ if __name__ == '__main__':
         print("No phenotype argument given. Setting pheno to 'continuous (1)'.\n")
         trait_flag = [0]
 
+    if args.risk_flag:
+        if args.risk_flag == "1":
+            risk_flag = 1
+        else:
+            risk_flag = 0
+    else:
+        print("No risk flag argument given. Setting risk to 0.\n")
+        risk_flag = 0  
+
     # Generates 5 simulations
     nums = [1]
 
-    for model_flag, v, ctr, trait_flag in list(itertools.product(model_flags,[v_set],nums,trait_flag)):
+    for model_flag, v, ctr, trait_flag, risk_flag in list(itertools.product(model_flags,[v_set],nums,trait_flag,risk_flag)):
         print model_flag
         print v
         print ctr
@@ -479,6 +490,9 @@ if __name__ == '__main__':
             #####################################
             # Normalize F by column (making sure each column i.e. individual is bet. [0 1])
             F = F/F.max(axis=0)
+            d = 10
+        else:
+            d = 3
             #####################################
 
         # % simulating X using binomial distribution of estimated F
@@ -497,10 +511,14 @@ if __name__ == '__main__':
         # # % same as normalize(X,2)
         normX,_ = normalize.norm(X,0);
 
+        risk_pop = random.randint(d)
         # % simulate the traits
         # % the strategy simulates non-genetic effects and random variation
-        traits, status = traitSim.simulate(normX,S,v,m,n,d)
-        Y = status
+        if risk_flag == 0:
+            traits, status = traitSim.simulate(X,S,v,m,n,d)
+        else:
+            traits, status = traitSim_risk.simulate(X,S,v,m,n,d,risk_pop)
+        Y = traits
         # print status
         # print traits
         # print type(traits)
