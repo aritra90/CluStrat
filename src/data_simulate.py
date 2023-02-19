@@ -1,27 +1,17 @@
-from __future__ import division
-from __future__ import absolute_import
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
-matplotlib.use(u"Agg")
-import matplotlib.pyplot as plt
-
 import pandas as pd
 import numpy as np
-import sys, csv, os, math, subprocess, itertools, time, random, argparse
-from operator import add
-from datetime import datetime
-
+import sys, csv, os, math, subprocess, itertools, time, random, argparse, pdb
 from sklearn.cluster import KMeans
 from scipy.stats.distributions import chi2
 from scipy.spatial.distance import pdist
-import normalize, traitSim, traitSim_risk #, ArmitChisq, EigStrat, getMH, CluStrat
+import normalize
 from plinkio.plinkfile import WritablePlinkFile, Sample, Locus
+from datetime import datetime
 
-import pdb
 
 def msg(name=None):
     return '''data_simulate.py
-         >> python data_simulate.py --model BN --prop 10,20,70 --pheno 1 --size 1000,10000
+         >> python data_simulate.py --model BN
         '''
 
 def parse_arguments():
@@ -30,127 +20,106 @@ def parse_arguments():
     parser.add_argument("-m", "--model", dest='model', action='store', help="Indicate which model to use for simulation (--model PSD/BN/TGP).",
                         metavar="MODEL")
 
-    parser.add_argument("-p", "--prop", dest='prop', action='store', help="Indicate which proportion to use for simulation (--prop 1/2/3).",
-                        metavar="PROP")
+    # parser.add_argument("-p", "--prop", dest='prop', action='store', help="Indicate which proportion to use for simulation (--prop 1/2/3).",
+    #                     metavar="PROP")
+    #
+    # parser.add_argument("-ph", "--pheno", dest='phenotype', action='store', help="Indicate binary or continuous phenotype type to use for simulation (--pheno 0/1).",
+    #                     metavar="PHENO")
+    #
+    # parser.add_argument("-sz", "--size", dest='size', action='store', help="Enter the desired simulation matrix dimensions (individuals by SNPs)",
+    #                     metavar="SIZE")
 
-    parser.add_argument("-ph", "--pheno", dest='phenotype', action='store', help="Indicate binary or continuous phenotype type to use for simulation (--pheno 0/1).",
-                        metavar="PHENO")
-
-    parser.add_argument("-sz", "--size", dest='size', action='store', help="Enter the desired simulation matrix dimensions (individuals by SNPs)",
-                        metavar="SIZE")
-
-    parser.add_argument("-r", "--risk", dest='risk_flag', action='store', help="Set Risk flag if you want risk for one population to be greater than the others",
-                        metavar="RISK")
     args = parser.parse_args()
 
     return args
 
-def convert2plink(X, status, model_flag, plink_filenm, continuous_trait=None):
+def convert2plink(X, model_directory):
 
     #create fake sample IDs
     # sampleIDs = [unicode(model_flag)+u"000"+unicode(s) for s in xrange(1,X.shape[1]+1)]
     #create fake rsIDs
-    rsIDs = [u"rs000"+unicode(s) for s in xrange(1,X.shape[0]+1)]
+    rsIDs = ["rs000"+str(s) for s in range(1, X.shape[0]+1)]
     #create fake positions increasing randomly between 200 and 20k centimorgans
-    snpPositions = [float(s) for s in xrange(70000,70000+X.shape[0])]
-    for k in xrange(1,X.shape[0]):
-        snpPositions[k] = snpPositions[k-1] + random.randint(200,1000)
+    snpPositions = [float(s) for s in range(70000, 70000+X.shape[0])]
+    for k in range(1, X.shape[0]):
+        snpPositions[k] = snpPositions[k-1] + random.randint(200, 1000)
 
-    # print(snpPositions)
-    # print(' ')
-    # print(sampleIDs)
-    # print(" ")
-    # print(rsIDs)
-
-    if continuous_trait is None:
-        list_of_Samples = []
-        # Create samples
-        for i in range(X.shape[1]):
-            # print sampleIDs[i]
-            num = i+1
-            fid = '%d'%num
-            iid = fid
-            father_iid = fid
-            mother_iid = fid
-            list_of_Samples.append(Sample(fid, iid, father_iid, mother_iid, -9, status[i]))
-
-        # sys.exit(0)
-        # print(list_of_Samples)
-        # print(len(list_of_Samples))
-    else:
-        list_of_Samples = []
-        # Create samples
-        for i in range(X.shape[1]):
-            # print sampleIDs[i]
-            num = i+1
-            fid = '%d'%num
-            iid = fid
-            father_iid = fid
-            mother_iid = fid
-            list_of_Samples.append(Sample(fid, iid, father_iid, mother_iid, -9, 2, continuous_trait[i]))
-
-        # sys.exit(0)
-        # print(list_of_Samples)
-        # print(len(list_of_Samples))
+    list_of_Samples = []
+    # Create samples
+    for i in range(X.shape[1]):
+        # print sampleIDs[i]
+        num = i+1
+        fid = 'id%d' % num
+        iid = fid
+        father_iid = '%d' % 0
+        mother_iid = '%d' % 0
+        list_of_Samples.append(
+            Sample(fid, iid, father_iid, mother_iid, -9, -9))
 
     list_of_Loci = []
+    # chromosome numbers based on how many SNPs being simulated
+    num_chroms = 22
+    chromosomes = list(range(1,num_chroms+1)) # chrs 1 thru 22
+    segments = np.repeat(int(X.shape[0]/num_chroms),num_chroms)
+    if m%num_chroms != 0:
+        segments[0] = int(m/num_chroms) + int(m%num_chroms) # add remainder to the first chromosome
+    chr_labels = np.repeat(chromosomes, segments)
+
     # Create loci
-    for j in xrange(0,X.shape[0]):
-        rng = random.randint(0,1)
+    for j in range(0, X.shape[0]):
+        rng = random.randint(0, 1)
         if rng == 0:
-            alleles = [u'A',u'T']
+            alleles = ['A', 'T']
         else:
-            alleles = [u'C',u'G']
+            alleles = ['C', 'G']
 
         # Choosing to encode rng = 0 as allele 'A'/'C' and 2 as allele 'T'/'G' (1 as heterozygous occurrences)
         # Get the allele frequencies
-        allele_counts = np.unique(X[j,:], return_counts = True)
+        allele_counts = np.unique(X[j, :], return_counts=True)
         # print(allele_counts)
         # if 0,1,2 all occur in the SNP...
         if allele_counts[0].shape[0] == 3:
             # Determine which is the minor allele and place that allele as the first allele argument
             if allele_counts[1][0] < allele_counts[1][2]:
-                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                list_of_Loci.append(
+                    Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
             else:
-                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                list_of_Loci.append(
+                    Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
         else:
             if 0 in allele_counts[0] and 1 in allele_counts[0]:
-                # print("no occurrences of '2'...")
-                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                list_of_Loci.append(
+                    Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
             elif 0 in allele_counts[0] and 2 in allele_counts[0]:
                 # print("no occrrences of '1'...")
                 if allele_counts[1][0] < allele_counts[1][1]:
-                    list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
+                    list_of_Loci.append(
+                        Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
                 else:
-                    list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
+                    list_of_Loci.append(
+                        Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[1], alleles[0]))
             else:
                 # print("no occurrences of '0'...") then its automatically the minor allele cause it doesnt show up
-                list_of_Loci.append(Locus(1, rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
-            # sys.exit(0)
+                list_of_Loci.append(
+                    Locus(chr_labels[j], rsIDs[j], 0, snpPositions[j], alleles[0], alleles[1]))
 
-    print u'File prefix: '+plink_filenm
+    file_prefix = str(model_directory)+'/simdata'
+    print('File prefix: '+file_prefix)
 
     # Create PLINK files corresponding to the data
-    # pdb.set_trace()
     # Sample(fid, iid, iid, iid, sex, affection, phenotype = 0.0)
-    plink_obj = WritablePlinkFile(plink_filenm,list_of_Samples)
+    plink_obj = WritablePlinkFile(file_prefix, list_of_Samples)
     # plink_obj = WritablePlinkFile(file_prefix,[Sample('0', '0', '0', '0', 0, 0)])
 
-
-    for i in xrange(0,X.shape[0]):
-        # print(X[i,:])
-        # print(X[i,:].shape)
-        plink_obj.write_row(list_of_Loci[i], X[i,:])
-    # plink_obj.loci = list_of_Loci
-
-    # print("YAY")
-    # sys.exit(0)
+    for i in range(0, X.shape[0]):
+        plink_obj.write_row(list_of_Loci[i], X[i, :])
+    print("Files created")
     plink_obj.close()
     del plink_obj
     del list_of_Samples
     del list_of_Loci
+    return file_prefix
 
-    # return plink_obj
 if __name__ == '__main__':
 
     args = parse_arguments()
@@ -166,68 +135,54 @@ if __name__ == '__main__':
         print("No model argument given. Setting model to 'BN'.\n")
         model_flags = [u"BN"]
 
-    if args.prop:
-        v = args.prop.split(',')
-        try:
-            v_set = [int(i) for i in v]
-
-            if len(v) != 3 or np.sum(v_set) != 100:
-                print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-                sys.exit(1)
-
-        except ValueError:
-            print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-            sys.exit(1)
-    else:
-        print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
-        sys.exit(1)
-
-    if args.size:
-        dims = args.size.split(',')
-        try:
-            sim_shape = [int(i) for i in dims]
-
-            if len(dims) != 2:
-                print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-                sys.exit(1)
-
-        except ValueError:
-            print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-            sys.exit(1)
-    else:
-        print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
-        sys.exit(1)
-
-
-    if args.phenotype:
-        if args.phenotype == "0":
-            trait_flag = [0]
-        else:
-            trait_flag = [1]
-    else:
-        print("No phenotype argument given. Setting pheno to 'continuous (1)'.\n")
-        trait_flag = [0]
-
-    if args.risk_flag:
-        if args.risk_flag == "1":
-            risk_flag = 1
-        else:
-            risk_flag = 0
-    else:
-        print("No risk flag argument given. Setting risk to 0.\n")
-        risk_flag = 0  
+    # if args.prop:
+    #     v = args.prop.split(',')
+    #     try:
+    #         v_set = [int(i) for i in v]
+    #
+    #         if len(v) != 3 or np.sum(v_set) != 100:
+    #             print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+    #             sys.exit(1)
+    #
+    #     except ValueError:
+    #         print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+    #         sys.exit(1)
+    # else:
+    #     print("Usage: -pr 10,20,70 means 10% genetic, 20% environmental and 70% noise variance.")
+    #     sys.exit(1)
+    #
+    # if args.size:
+    #     dims = args.size.split(',')
+    #     try:
+    #         sim_shape = [int(i) for i in dims]
+    #
+    #         if len(dims) != 2:
+    #             print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+    #             sys.exit(1)
+    #
+    #     except ValueError:
+    #         print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+    #         sys.exit(1)
+    # else:
+    #     print("Usage: -sz 1000,10000 means 1k individuals and 10k SNPs")
+    #     sys.exit(1)
+    #
+    # if args.phenotype:
+    #     if args.phenotype == "0":
+    #         trait_flag = [0]
+    #     else:
+    #         trait_flag = [1]
+    # else:
+    #     print("No phenotype argument given. Setting pheno to 'continuous (1)'.\n")
+    #     trait_flag = [0]
 
     # Generates 5 simulations
     nums = [1]
-
-    for model_flag, v, ctr, trait_flag, risk_flag in list(itertools.product(model_flags,[v_set],nums,trait_flag,risk_flag)):
-        print model_flag
-        print v
-        print ctr
-
-        n = int(sim_shape[0])
-        m = int(sim_shape[1])
-
+    trait_flag = [0]
+    # for model_flag, v, ctr, trait_flag in list(itertools.product(model_flags,[v_set],nums,trait_flag)):
+    for model_flag, ctr, trait_flag in list(itertools.product(model_flags,nums,trait_flag)):
+        n = int(1e3)
+        m = int(1e4)
 
         if model_flag == u"BN":
             # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -268,7 +223,7 @@ if __name__ == '__main__':
 
             # %populate the allele freq matrix from BN with (p,F) from HapMap
             # % for each SNP...
-            for i in xrange(0,m):
+            for i in range(0,m):
                 # each row will generate 'd' variates drawing from this distribution
                 G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
 
@@ -280,7 +235,7 @@ if __name__ == '__main__':
             # % Treating the probabilities as ranges
             # % 1: <60/210, 2: bet. 60/210 and 120/210, 3: >=120/210
             popidx = np.zeros((n,1));
-            for i in xrange(0,n):
+            for i in range(0,n):
                 p = random.uniform(0, 1);
                 if p < (60.0/210):
                     pick = 1;
@@ -334,7 +289,7 @@ if __name__ == '__main__':
 
             # %populate the allele freq matrix from BN with (p,F) from HapMap
             # % for each SNP...
-            for i in xrange(0,m):
+            for i in range(0,m):
                 # each row will generate 'd' variates drawing from this distribution
                 G[i,:] = np.random.beta(frq[i]*(1-Fst[i])/Fst[i], (1-frq[i])*(1-Fst[i])/Fst[i], size=d)
 
@@ -348,8 +303,8 @@ if __name__ == '__main__':
 
             alpha = 0.1*np.ones((d,1))
             popidx = np.zeros((n,1));
-            for i in xrange(0,n):
-                for j in xrange(0,d):
+            for i in range(0,n):
+                for j in range(0,d):
                     S[j,i] = np.random.gamma(alpha[j],1)
 
                 S[:,i] = S[:,i]/np.sum(S[:,i])
@@ -376,7 +331,7 @@ if __name__ == '__main__':
 
             #populate the allele freq matrix from BN with (p,F) from HapMap
             # for each SNP...
-            for i in xrange(0,m):
+            for i in range(0,m):
                 # each row will generate 'd' variates drawing from this distribution
                 G[i,:] = 0.9*np.random.uniform(0, 0.5, size=d)
 
@@ -386,7 +341,7 @@ if __name__ == '__main__':
             HGDP_PCs = pd.read_csv(u'pruned_HGDP_topPops_singVecs.txt',sep=u' ',header=None)
             topPCs = HGDP_PCs.values
 
-            for i in xrange(0,d):
+            for i in range(0,d):
                S[i,:] = (topPCs[:,i]-np.min(topPCs[:,i]))/(np.max(topPCs[:,i])-np.min(topPCs[:,i]))
             S[d-1,:] = 1
 
@@ -394,7 +349,7 @@ if __name__ == '__main__':
 
             HGDP_subpops = pd.read_csv(u'subpops_pruned_HGDP.txt',sep=u' ',header=None)
 
-            for i in xrange(0,HGDP_subpops.values.shape[0]):
+            for i in range(0,HGDP_subpops.values.shape[0]):
                 if HGDP_subpops.values[i] == u"Biaka_Pygmies":
                     popidx[i] = 1;
                 elif HGDP_subpops.values[i] == u"French":
@@ -419,8 +374,8 @@ if __name__ == '__main__':
         elif model_flag == u"TGP":
             # REMEMBER: 'n' here is INDIVIDUALS not SNPs
             # Downsampling for simulation (computationally easier)
-            # m = int(1e4) #number of SNPs
-            # n = int(1056) #no. of individuals
+            # m = int(1e5) #number of SNPs
+            n = int(1056) #no. of individuals
             flag = 0 #plot flag
             d = int(10) #number of populations (see log of --fst result)
 
@@ -432,12 +387,12 @@ if __name__ == '__main__':
             # individual assigned to one of the 51 subpopulations i.e. admixture
             S = np.zeros((d,n)) #individual population admixture
 
-            # random seeding here...
-            random.seed(datetime.now())
+            # # random seeding here...
+            # random.seed(datetime.now())
 
             #populate the allele freq matrix from BN with (p,F) from HapMap
             # for each SNP...
-            for i in xrange(0,m):
+            for i in range(0,m):
                 # each row will generate 'd' variates drawing from this distribution
                 G[i,:] = 0.9*np.random.uniform(0, 0.5, size=d)
 
@@ -447,7 +402,7 @@ if __name__ == '__main__':
             TGP_PCs = pd.read_csv(u'pruned_TGP_topPops_singVecs.txt',sep=u' ',header=None)
             topPCs = TGP_PCs.values
 
-            for i in xrange(0,d):
+            for i in range(0,d):
                S[i,:] = (topPCs[:,i]-np.min(topPCs[:,i]))/(np.max(topPCs[:,i])-np.min(topPCs[:,i]))
             S[d-1,:] = 1
 
@@ -455,7 +410,7 @@ if __name__ == '__main__':
 
             TGP_subpops = pd.read_csv(u'subpops_pruned_TGP.txt',sep=u' ',header=None)
 
-            for i in xrange(0,TGP_subpops.values.shape[0]):
+            for i in range(0,TGP_subpops.values.shape[0]):
                 if TGP_subpops.values[i] == u"CHB":
                     popidx[i] = 1;
                 elif TGP_subpops.values[i] == u"CHS":
@@ -478,7 +433,7 @@ if __name__ == '__main__':
                     # YRI
                     popidx[i] = 10;
         else:
-            print u"Not a valid model type! Options are BN, PSD, HGDP or TGP."
+            print("Not a valid model type! Options are BN, PSD, HGDP or TGP.")
             sys.exit(0)
 
         # %Get the allele frequency matrix for each individual (SNP -by- indiv)
@@ -490,9 +445,6 @@ if __name__ == '__main__':
             #####################################
             # Normalize F by column (making sure each column i.e. individual is bet. [0 1])
             F = F/F.max(axis=0)
-            d = 10
-        else:
-            d = 3
             #####################################
 
         # % simulating X using binomial distribution of estimated F
@@ -504,39 +456,42 @@ if __name__ == '__main__':
         # # % randomly fill those rows with 0/1 in a random column
         X[idxzer,random.randint(0,n-1)] = 1;
         # print('Mean of simulated matrix: ', np.mean(X, axis=0))
+        # print(X.shape)
 
 
         # # %the second arg is related to whether we just want to mean center X or
         # # %standardize by the 2*p*(1-p)
         # # % same as normalize(X,2)
-        normX,_ = normalize.norm(X,0);
+        normX = normalize.norm(X,0);
 
-        risk_pop = random.randint(d)
-        # % simulate the traits
-        # % the strategy simulates non-genetic effects and random variation
-        if risk_flag == 0:
-            traits, status = traitSim.simulate(X,S,v,m,n,d)
-        else:
-            traits, status = traitSim_risk.simulate(X,S,v,m,n,d,risk_pop)
-        Y = traits
-        # print status
-        # print traits
-        # print type(traits)
-        # sys.exit(0)
+        kinship = normX.T.dot(normX)
+        kinship = kinship / kinship.max(axis=0)
+        # print(kinship)
+        # print(kinship.shape)
+
+        # # % simulate the cont_pheno
+        # # % the strategy simulates non-genetic effects and random variation
+        # num_causal = 10
+        # cont_pheno, bin_pheno = traitSim.simulate(normX,S,v,m,n,d,num_causal=num_causal)
+        # Y = bin_pheno
+        # pheno = []
+        # for i in range(cont_pheno.shape[0]):
+        #     pheno.append(["id"+str(i+1), "id"+str(i+1), float(cont_pheno[i])])
+        # pheno = pd.DataFrame(pheno)
+        # causal_idx = pd.DataFrame(list(range(num_causal)))+1
+        # # print(causal_idx)
 
         ###############################################################################
         # Write data in cluster to plink formatted file
-
         print("Converting to PLINK format...")
-        if trait_flag == 0:
-            plink_filenm = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.phenotype)
-            # plink_filenm = u" " #os.path.abspath(plink_filenm)
+        model_directory = str(model_flag)+"_simdata"
+        if not os.path.exists(model_directory):
+            os.makedirs(model_directory)
+        convert2plink(X, model_directory)
+        # causal_idx.to_csv(model_directory+"/causal_idx", header = ["x"])
+        # pheno.to_csv(model_directory+"/pheno", sep = '\t', header = False, index = False)
 
-            convert2plink(X,status,model_flag, plink_filenm)
-        else:
-            plink_filenm = "simfile_"+str(args.model)+"_"+str(v[0])+"_"+str(v[1])+"_"+str(v[2])+"_"+str(args.phenotype)
-            # plink_filenm = u" " #os.path.abspath(plink_filenm)
-
-            convert2plink(X,status,model_flag, plink_filenm, continuous_trait=traits)
+        # np.savetxt(model_directory+'/tgp_X', X)
+        # np.savetxt(model_directory+'/tgp_kinship', kinship)
 
         ###############################################################################
